@@ -41,8 +41,11 @@ export class RequestEntity {
   userId: string;
 
   @Column({ default: '' })
+  userName: string;
+
+  @Column({ default: '' })
   description: string;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   date: Date;
 }

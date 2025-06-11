@@ -11,6 +11,7 @@ export interface Request {
   cloudProvider: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   userId: string;
+  userName: string;
   description: string;
   date: Date;
 }

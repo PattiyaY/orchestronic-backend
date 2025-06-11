@@ -30,5 +30,8 @@ export class CreateRequestDto {
   userId: string;
 
   @IsString()
+  userName: string;
+
+  @IsString()
   description: string;
 }

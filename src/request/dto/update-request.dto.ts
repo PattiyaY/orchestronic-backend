@@ -39,5 +39,9 @@ export class UpdateRequestDto {
 
   @IsOptional()
   @IsString()
+  userName?: string;
+
+  @IsOptional()
+  @IsString()
   description?: string;
 }
