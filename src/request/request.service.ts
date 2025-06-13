@@ -1,46 +1,57 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { RequestEntity } from './models/request.entity';
-import { Request } from './models/request.interface';
+import { Prisma } from '@prisma/client';
+import { DatabaseService } from 'src/database/database.service';
 
 @Injectable()
 export class RequestService {
-  constructor(
-    @InjectRepository(RequestEntity)
-    private readonly requestRepository: Repository<RequestEntity>,
-  ) {}
+  constructor(private readonly databaseService: DatabaseService) {}
 
   async findAll(status?: 'Pending' | 'Approved' | 'Rejected') {
     if (status) {
-      return await this.requestRepository.find({
-        where: { status },
+      return await this.databaseService.request.findMany({
+        where: status ? { status } : {},
       });
     }
-    return await this.requestRepository.find();
   }
 
   async findById(id: number) {
-    return await this.requestRepository.findOneBy({ id });
+    return await this.databaseService.request.findUnique({
+      where: { id: id.toString() },
+    });
   }
 
-  async createRequest(request: Omit<Request, 'date'>) {
-    const newRequest = this.requestRepository.create(request);
-    return await this.requestRepository.save(newRequest);
+  /*
+Prisma needs to know what action to perform on this relation.
+
+"create" tells Prisma: "When creating this Request, also create a new Resources record with the following data."
+so that's why sent data this format:
+
+"resources": {
+  "create": {
+    "VM": 2,
+    "DB": 1,
+    "ST": 3
+  }
+}
+
+*/
+
+  async createRequest(request: Prisma.RequestCreateInput) {
+    return this.databaseService.request.create({
+      data: request,
+    });
   }
 
-  async updateRequestInfo(
-    id: number,
-    updateData: Partial<Omit<Request, 'date'>>,
-  ) {
-    await this.requestRepository.update(id, updateData);
-    return await this.requestRepository.findOneBy({ id });
+  async updateRequestInfo(id: number, updateData: Prisma.RequestUpdateInput) {
+    return this.databaseService.request.update({
+      where: { id: id.toString() },
+      data: updateData,
+    });
   }
 
   async removeRequest(id: number) {
-    const request = await this.requestRepository.findOneBy({ id });
-    if (!request) return null;
-    await this.requestRepository.remove(request);
-    return request;
+    return this.databaseService.request.delete({
+      where: { id: id.toString() },
+    });
   }
 }

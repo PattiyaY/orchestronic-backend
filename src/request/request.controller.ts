@@ -9,8 +9,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { RequestService } from './request.service';
-import { CreateRequestDto } from './dto/create.request.dto';
-import { UpdateRequestDto } from './dto/update-request.dto';
+
+import { Prisma } from '@prisma/client';
 
 @Controller('request')
 export class RequestController {
@@ -27,14 +27,14 @@ export class RequestController {
   }
 
   @Post()
-  createRequest(@Body() request: CreateRequestDto) {
+  createRequest(@Body() request: Prisma.RequestCreateInput) {
     return this.requestService.createRequest(request);
   }
 
   @Patch(':id')
   updateRequestInfo(
     @Param('id') id: string,
-    @Body() requestUpdate: UpdateRequestDto,
+    @Body() requestUpdate: Prisma.RequestUpdateInput,
   ) {
     return this.requestService.updateRequestInfo(+id, { ...requestUpdate });
   }

@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { RequestModule } from './request/request.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       synchronize: true,
     }),
     RequestModule,
+    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],
