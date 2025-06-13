@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Request {
+  id             String   @id @default(uuid())
+  team           String?  
+  repository     String?
+  resourceGroup  String?
+  region         String?
+  cloudProvider  String?
+  status         Status?  @default(Pending)
+  userId         String?
+  userName       String?
+  description    String?
+
+  // Embedded Resources object as a separate model (1-1 relation)
+  resources      Resources? @relation(fields: [resourcesId], references: [id])
+  resourcesId    String?    @unique
+  date      DateTime @default(now())
+}
+
+model Resources {
+  id    String @id @default(uuid())
+  VM    Int
+  DB    Int
+  ST    Int
+
+  request Request?
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  role      Role
+}
+
+enum Status {
+  Pending
+  Approved
+  Rejected
+}
+
+enum Role {
+  Admin
+  IT
+  Developer
+}
