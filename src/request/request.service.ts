@@ -9,9 +9,10 @@ export class RequestService {
   async findAll(status?: 'Pending' | 'Approved' | 'Rejected') {
     if (status) {
       return await this.databaseService.request.findMany({
-        where: status ? { status } : {},
+        where: { status },
       });
     }
+    return await this.databaseService.request.findMany();
   }
 
   async findById(id: number) {
