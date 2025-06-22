@@ -22,5 +22,5 @@ export function generateResources() {
 export function generateRepoName() {
   const adjective = faker.word.adjective(); // e.g., "fast"
   const noun = faker.word.noun(); // e.g., "engine"
-  return `${adjective}-${noun}`.toLowerCase(); // e.g., "fast-engine"
+  return `${adjective}-${noun}`.toLowerCase();
 }
