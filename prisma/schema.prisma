@@ -78,7 +78,7 @@ enum Status {
 }
 
 enum Role {
+  Developer
   Admin
   IT
-  Developer
 }
