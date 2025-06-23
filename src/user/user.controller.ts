@@ -56,10 +56,24 @@ export class UserController {
   })
   async findByEmail(
     @Query() query: FindUserByEmailDto,
-  ): Promise<UserResponseDto[]> {
+  ): Promise<UserResponseDto> {
     const { email } = query;
 
     const users = await this.userService.findByEmail(email);
+
+    if (!users) {
+      throw new NotFoundException('USER_NOT_FOUND');
+    }
+
+    return users;
+  }
+
+  async fuzzyFindUsersByEmail(
+    @Query() query: FindUserByEmailDto,
+  ): Promise<UserResponseDto[]> {
+    const { email } = query;
+
+    const users = await this.userService.fuzzyFindUsersByEmail(email);
 
     if (!users || users.length === 0) {
       throw new NotFoundException('USER_NOT_FOUND');

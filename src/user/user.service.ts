@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -20,7 +21,15 @@ export class UserService {
     return await this.databaseService.user.findMany();
   }
 
-  async findByEmail(email: string) {
+  async findByEmail(email: string): Promise<User | null> {
+    return await this.databaseService.user.findUnique({
+      where: {
+        email: email,
+      },
+    });
+  }
+
+  async fuzzyFindUsersByEmail(email: string): Promise<User[]> {
     return await this.databaseService.user.findMany({
       where: {
         email: {
