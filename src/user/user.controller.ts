@@ -13,6 +13,7 @@ import { UserResponseDto } from './dto/user-response.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { ApiOperation } from '@nestjs/swagger';
+import { User } from '@prisma/client';
 
 @Controller('user')
 export class UserController {
@@ -59,7 +60,7 @@ export class UserController {
   ): Promise<UserResponseDto> {
     const { email } = query;
 
-    const users = await this.userService.findByEmail(email);
+    const users: User | null = await this.userService.findByEmail(email);
 
     if (!users) {
       throw new NotFoundException('USER_NOT_FOUND');
@@ -68,6 +69,7 @@ export class UserController {
     return users;
   }
 
+  @Get('fuzzy-find-by-email')
   async fuzzyFindUsersByEmail(
     @Query() query: FindUserByEmailDto,
   ): Promise<UserResponseDto[]> {
