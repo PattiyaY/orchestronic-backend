@@ -9,9 +9,9 @@ import { UserController } from './user/user.controller';
 import { UserModule } from './user/user.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { RepositoryService } from './repository/repository.service';
-import { RepositoryController } from './repository/repository.controller';
-import { RepositoryModule } from './repository/repository.module';
+import { RepositoriesModule } from './repositories/repositories.module';
+import { RepositoriesController } from './repositories/repositories.controller';
+import { RepositoriesService } from './repositories/repositories.service';
 
 @Module({
   imports: [
@@ -33,9 +33,9 @@ import { RepositoryModule } from './repository/repository.module';
     RequestModule,
     DatabaseModule,
     UserModule,
-    RepositoryModule,
+    RepositoriesModule,
   ],
-  controllers: [AppController, UserController, RepositoryController],
-  providers: [AppService, RepositoryService],
+  controllers: [AppController, UserController, RepositoriesController],
+  providers: [AppService, RepositoriesService],
 })
 export class AppModule {}

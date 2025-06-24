@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
-export class CreateRepositoryDto {
+export class CreateRepositoriesDto {
   @IsString()
   @IsNotEmpty()
   @ApiProperty({
@@ -17,4 +17,14 @@ export class CreateRepositoryDto {
     description: 'A brief description of the repository',
   })
   description?: string;
+
+  @IsOptional()
+  @IsString({ each: true })
+  @ApiProperty({
+    type: [String],
+    description:
+      'List of collaborator Email to be associated with the repository',
+    example: ['u6512345@au.edu, u6512190@au.edu'],
+  })
+  collaborators: String[];
 }

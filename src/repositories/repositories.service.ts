@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { CreateRepositoriesDto } from './dto/create-repository.dto';
 
 @Injectable()
-export class RepositoryService {
+export class RepositoriesService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async findByName(name: string) {
@@ -20,7 +21,7 @@ export class RepositoryService {
     };
   }
 
-  async createRepository(repository: { name: string; description?: string }) {
+  async createRepository(repository: CreateRepositoriesDto) {
     const existingRepository = await this.findByName(repository.name);
     if (existingRepository.exists) {
       return {
@@ -32,6 +33,9 @@ export class RepositoryService {
       data: {
         name: repository.name,
         description: repository.description || '',
+        developers: {
+          connect: repository.collaborators.map((email: string) => ({ email })),
+        },
       },
     });
 
