@@ -26,12 +26,11 @@ model Request {
   cloudProvider String
   status        Status @default(Pending)
   user          User   @relation(fields: [userId], references: [id])
+  userId      String
   description   String
-
   resources   Resources @relation(fields: [resourcesId], references: [id])
   resourcesId String    @unique
   date        DateTime  @default(now())
-  userId      String
 }
 
 model Repository {
