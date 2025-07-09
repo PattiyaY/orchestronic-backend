@@ -12,6 +12,7 @@ import { join } from 'path';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { RepositoriesController } from './repositories/repositories.controller';
 import { RepositoriesService } from './repositories/repositories.service';
+import { ResourceModule } from './resource/resource.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { RepositoriesService } from './repositories/repositories.service';
     DatabaseModule,
     UserModule,
     RepositoriesModule,
+    ResourceModule,
   ],
   controllers: [AppController, UserController, RepositoriesController],
   providers: [AppService, RepositoriesService],
