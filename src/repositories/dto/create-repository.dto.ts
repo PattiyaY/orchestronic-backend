@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
-import { CreateResourceDto } from 'src/resource/dto/create-resource.dto';
+import { CreateResourceDto } from '../../resource/dto/create-resource.dto';
 
 export class CreateRepositoriesDto {
   @IsString()
