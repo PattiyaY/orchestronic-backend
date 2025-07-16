@@ -15,18 +15,12 @@ export class RepositoriesController {
     return this.repositoriesService.findByName(name);
   }
 
-  @UseGuards(AuthGuard('jwt'))
-  @Get()
-  async getUserRepositories() {
-    console.log('Fetching user repositories');
-    return this.repositoriesService.getUserRepositories();
-  }
-
   @Post()
   createRepository(@Body() repository: CreateRepositoriesDto) {
     return this.repositoriesService.createRepository(repository);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Get()
   findAll() {
     return this.repositoriesService.findAll();

@@ -6,7 +6,6 @@ export class DatabaseService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  ownedRepository: any;
   async onModuleInit() {
     await this.$connect();
   }
