@@ -18,11 +18,11 @@ import { User } from '@prisma/client';
 import { AuthGuard } from '@nestjs/passport';
 
 @ApiBearerAuth('access-token')
+@UseGuards(AuthGuard('jwt'))
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @UseGuards(AuthGuard('jwt'))
   @Get()
   @ApiOperation({
     summary: 'Find all users',

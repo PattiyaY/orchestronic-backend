@@ -7,7 +7,6 @@ import { AuthGuard } from '@nestjs/passport';
 export class RepositoriesService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  @UseGuards(AuthGuard('jwt'))
   async findAll() {
     return await this.databaseService.repository.findMany({
       include: { resources: true, collaborators: true, request: true },

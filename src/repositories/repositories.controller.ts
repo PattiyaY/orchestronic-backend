@@ -6,6 +6,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiBearerAuth('access-token')
+@UseGuards(AuthGuard('jwt'))
 @Controller('repositories')
 export class RepositoriesController {
   constructor(private readonly repositoriesService: RepositoriesService) {}
@@ -20,7 +21,6 @@ export class RepositoriesController {
     return this.repositoriesService.createRepository(repository);
   }
 
-  @UseGuards(AuthGuard('jwt'))
   @Get()
   findAll() {
     return this.repositoriesService.findAll();

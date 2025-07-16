@@ -8,12 +8,16 @@ import {
   Post,
   Query,
   Request,
+  UseGuards,
 } from '@nestjs/common';
 import { RequestService } from './request.service';
 import { Prisma, Status } from '@prisma/client';
-import { ApiBody, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { CreateRequestDto } from './dto/create-request.dto';
+import { AuthGuard } from '@nestjs/passport';
 
+@ApiBearerAuth('access-token')
+@UseGuards(AuthGuard('jwt'))
 @Controller('request')
 export class RequestController {
   constructor(private readonly requestService: RequestService) {}
