@@ -3,8 +3,6 @@ import { Prisma, Status } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ApiBody } from '@nestjs/swagger';
-import { CreateRepositoryDto } from './dto/create-repository.dto';
-import { connect } from 'http2';
 
 @Injectable()
 export class RequestService {
@@ -14,6 +12,8 @@ export class RequestService {
     return await this.databaseService.request.findMany({
       include: {
         resources: true,
+        repository: true,
+        owner: true,
       },
     });
   }
@@ -87,9 +87,21 @@ export class RequestService {
       },
     });
 
+    const last = await this.databaseService.request.findFirst({
+      orderBy: { createdAt: 'desc' },
+      select: { displayCode: true },
+    });
+
+    const lastNumber = last?.displayCode
+      ? parseInt(last.displayCode.split('-')[1])
+      : 0;
+
+    const displayCode = `R-${lastNumber + 1}`;
+
     const newRequest = await this.databaseService.request.create({
       data: {
         description: request.description,
+        displayCode: displayCode,
         owner: {
           connect: {
             id: ownerId,
@@ -106,7 +118,14 @@ export class RequestService {
           },
         },
       },
+      include: {
+        resources: true,
+        repository: true,
+        owner: true,
+      },
     });
+
+    return newRequest;
   }
 
   async updateRequestInfo(id: number, updateData: Prisma.RequestUpdateInput) {

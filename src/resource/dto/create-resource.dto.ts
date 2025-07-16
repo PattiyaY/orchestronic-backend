@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CreateResourceConfigDto } from './create-resource-config.dto';
+import { CreateResourceConfigDto } from '../../request/dto/create-resource-config.dto';
 
 export class CreateResourceDto {
   @ApiProperty({

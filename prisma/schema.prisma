@@ -16,6 +16,7 @@ datasource db {
 
 model Request {
   id          String @id @default(uuid())
+  displayCode String @unique
   status      Status @default(Pending)
   description String
 
@@ -27,6 +28,9 @@ model Request {
 
   resources   Resources @relation(fields: [resourcesId], references: [id])
   resourcesId String    @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Repository {

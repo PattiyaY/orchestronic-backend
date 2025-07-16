@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { User } from '@prisma/client';
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
-import { CreateResourceDto } from 'src/request/dto/create-resource.dto';
+import { CreateResourceDto } from '../../resource/dto/create-resource.dto';
 
 export class CreateRepositoriesDto {
   @IsString()
