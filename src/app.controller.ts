@@ -3,7 +3,7 @@ import { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
-@ApiTags('Authentication')
+@ApiTags('Test')
 @ApiBearerAuth('access-token')
 @Controller()
 export class AppController {
