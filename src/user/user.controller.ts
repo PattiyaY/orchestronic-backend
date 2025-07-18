@@ -17,8 +17,8 @@ import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 import { AuthGuard } from '@nestjs/passport';
 
-@ApiBearerAuth('access-token')
-@UseGuards(AuthGuard('jwt'))
+// @ApiBearerAuth('access-token')
+// @UseGuards(AuthGuard('jwt'))
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}

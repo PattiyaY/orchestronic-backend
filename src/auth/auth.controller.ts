@@ -2,8 +2,6 @@
 import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { AzureTokenService } from './azure-token.service';
 import { ShortTokenService } from './short-token.service';
-import { DatabaseService } from 'src/database/database.service';
-import { User } from '@prisma/client';
 import { UserService } from 'src/user/user.service';
 import { AuthExchangeDto } from './dto/auth-exchange.dto';
 import { Public } from './public.decorator';
