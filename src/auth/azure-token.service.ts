@@ -4,7 +4,12 @@ import { jwtVerify, createRemoteJWKSet, decodeJwt } from 'jose';
 @Injectable()
 export class AzureTokenService {
   async verifyAzureToken(token: string): Promise<any> {
-    const decoded = decodeJwt(token);
+    let decoded;
+    try {
+      decoded = decodeJwt(token);
+    } catch (error) {
+      return null;
+    }
 
     const JWKS = createRemoteJWKSet(
       new URL(

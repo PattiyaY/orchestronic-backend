@@ -23,6 +23,10 @@ export class AuthController {
       authDto.azureToken,
     );
 
+    if (!payload) {
+      throw new BadRequestException('Invalid Azure token');
+    }
+
     // Extract user info from Azure token payload
     const userId = payload.oid;
     const email = payload.email || payload.upn;
