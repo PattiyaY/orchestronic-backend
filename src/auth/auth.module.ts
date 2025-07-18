@@ -18,27 +18,9 @@ import { DatabaseModule } from 'src/database/database.module';
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
     }),
-    DatabaseModule,
+    UserModule,
   ],
   controllers: [AuthController],
   providers: [AzureTokenService, ShortTokenService, JwtStrategy],
 })
 export class AuthModule {}
-
-// @Module({
-//   imports: [
-//     UserModule,
-//     PassportModule,
-//     JwtModule.registerAsync({
-//       useFactory: (configService: ConfigService) => ({
-//         import: [ConfigModule],
-//         secret: configService.get<string>('JWT_SECRET') || 'defaultSecret',
-//         signOptions: { expiresIn: '60m' },
-//       }),
-//       inject: [ConfigService],
-//     }),
-//   ],
-//   providers: [AuthService, LocalStrategy, JwtStrategy],
-//   exports: [AuthService],
-// })
-// export class AuthModule {}

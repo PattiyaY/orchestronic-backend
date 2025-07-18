@@ -63,7 +63,6 @@ export class UserController {
     @Query() query: FindUserByEmailDto,
   ): Promise<UserResponseDto> {
     const { email } = query;
-
     const users: User | null = await this.userService.findByEmail(email);
 
     if (!users) {

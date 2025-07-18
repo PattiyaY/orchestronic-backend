@@ -3,20 +3,28 @@ import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { AzureTokenService } from './azure-token.service';
 import { ShortTokenService } from './short-token.service';
 import { DatabaseService } from 'src/database/database.service';
+import { User } from '@prisma/client';
+import { UserService } from 'src/user/user.service';
+import { AuthExchangeDto } from './dto/auth-exchange.dto';
+import { Public } from './public.decorator';
 
-@Controller('Authentication')
+@Controller('auth')
 export class AuthController {
   constructor(
     private azureTokenService: AzureTokenService,
     private shortTokenService: ShortTokenService,
-    private readonly databaseService: DatabaseService,
+    private readonly userService: UserService,
   ) {}
 
+  @Public()
   @Post('exchange')
-  async exchangeToken(@Body('azureToken') azureToken: string) {
-    if (!azureToken) throw new BadRequestException('Azure token is required');
+  async exchangeToken(@Body() authDto: AuthExchangeDto) {
+    console.log('Received Azure token:', authDto);
+    if (!authDto) throw new BadRequestException('Azure token is required');
 
-    const payload = await this.azureTokenService.verifyAzureToken(azureToken);
+    const payload = await this.azureTokenService.verifyAzureToken(
+      authDto.azureToken,
+    );
 
     // Extract user info from Azure token payload
     const userId = payload.oid;
@@ -26,15 +34,7 @@ export class AuthController {
       throw new BadRequestException('Invalid Azure token payload');
     }
 
-    const user = await this.databaseService.user.findUnique({
-      where: { email: email },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        name: true,
-      },
-    });
+    const user = await this.userService.findByEmail(email);
 
     if (!user) {
       throw new BadRequestException('User not found');

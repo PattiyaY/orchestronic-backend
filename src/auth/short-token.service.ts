@@ -8,7 +8,7 @@ export class ShortTokenService {
   createToken(payload: {
     id: string;
     email: string;
-    role?: string;
+    role: string;
     name: string;
   }): string {
     return this.jwtService.sign(payload, {
