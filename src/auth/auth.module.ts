@@ -1,16 +1,10 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { LocalStrategy } from './strategies/local.strategy';
 import { UserModule } from '../user/user.module';
-import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthController } from './auth.controller';
 import { AzureTokenService } from './azure-token.service';
 import { ShortTokenService } from './short-token.service';
-import { UserService } from 'src/user/user.service';
-import { DatabaseModule } from 'src/database/database.module';
 
 @Module({
   imports: [
