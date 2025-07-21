@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -43,6 +44,17 @@ export class RequestController {
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.requestService.findById(+id);
+  }
+
+  @Get()
+  @ApiQuery({ name: 'id', required: true, description: 'Format: R-[number]' })
+  findWithRequestID(@Query('id') id: string) {
+    if (!/^R-\d+$/.test(id)) {
+      throw new BadRequestException(
+        'Invalid ID format. Expected format: R-<number>',
+      );
+    }
+    return this.requestService.findWithRequestID(id);
   }
 
   @Post()

@@ -3,6 +3,7 @@ import { Prisma, Status } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ApiBody } from '@nestjs/swagger';
+import { Resources, Repository, User } from '@prisma/client';
 
 @Injectable()
 export class RequestService {
@@ -137,5 +138,22 @@ export class RequestService {
     return this.databaseService.request.delete({
       where: { id: id.toString() },
     });
+  }
+
+  async findWithRequestID(id: string) {
+    const request = this.databaseService.request.findUnique({
+      where: { id },
+      include: {
+        resources: true,
+        repository: true,
+        owner: true,
+      },
+    });
+
+    if (!request) {
+      throw new Error(`Request with ID ${id} not found`);
+    }
+
+    return request;
   }
 }
