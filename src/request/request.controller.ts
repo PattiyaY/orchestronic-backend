@@ -15,7 +15,6 @@ import { Prisma, Status } from '@prisma/client';
 import { ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { decodeJwt } from 'jose';
 
 @ApiBearerAuth('access-token')
 @UseGuards(AuthGuard('jwt'))
@@ -48,10 +47,29 @@ export class RequestController {
     }
 
     const token = authHeader.split(' ')[1];
-    const { decodeJwt } = await import('jose');
-    const decoded = decodeJwt(token);
 
-    return this.requestService.createRequest(request, decoded);
+    try {
+      console.log('Request Controller: Attempting to import jose library...');
+      const { decodeJwt } = await import('jose');
+      console.log(
+        'Request Controller: Successfully imported jose, decoding token...',
+      );
+      const decoded = decodeJwt(token);
+      console.log('Request Controller: Token decoded successfully:', decoded);
+
+      return this.requestService.createRequest(request, decoded);
+    } catch (error) {
+      console.error(
+        'Request Controller: Error importing jose or decoding token:',
+        error,
+      );
+      console.error('Request Controller: Error details:', {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+      });
+      throw new Error('Invalid token - unable to process');
+    }
   }
 
   @Patch(':id')
