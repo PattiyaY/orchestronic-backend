@@ -114,7 +114,7 @@ export class RequestController {
   ) {
     const user = req.user;
 
-    if (!user || (user.role !== 'ADMIN' && user.role !== 'IT')) {
+    if (!user || (user.role !== 'Admin' && user.role !== 'IT')) {
       throw new ForbiddenException(
         'You do not have permission to update status',
       );
