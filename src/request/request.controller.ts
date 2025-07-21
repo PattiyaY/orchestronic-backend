@@ -15,7 +15,12 @@ import { Prisma, Status } from '@prisma/client';
 import { ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { decodeJwt } from 'jose';
+
+interface RequestWithHeaders {
+  headers: {
+    authorization?: string;
+  };
+}
 
 @ApiBearerAuth('access-token')
 @UseGuards(AuthGuard('jwt'))
@@ -41,16 +46,25 @@ export class RequestController {
 
   @Post()
   @ApiBody({ type: CreateRequestDto })
-  createRequest(@Request() req, @Body() request: CreateRequestDto) {
-    const authHeader = req.headers.authorization;
+  async createRequest(
+    @Request() req: RequestWithHeaders,
+    @Body() request: CreateRequestDto,
+  ) {
+    const authHeader = req.headers?.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new Error('Authorization header missing or malformed');
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = decodeJwt(token);
 
-    return this.requestService.createRequest(request, decoded);
+    try {
+      // Dynamic import for ESM module
+      const { decodeJwt } = await import('jose');
+      const decoded = decodeJwt(token);
+      return this.requestService.createRequest(request, decoded);
+    } catch {
+      throw new Error('Invalid token');
+    }
   }
 
   @Patch(':id')
