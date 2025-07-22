@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from '@prisma/client';
+import { CustomJWTPayload } from 'src/lib/types';
 
 @Injectable()
 export class UserService {
@@ -44,6 +45,12 @@ export class UserService {
         },
       },
       take: 5,
+    });
+  }
+
+  async findUserInfo(user: CustomJWTPayload) {
+    return await this.databaseService.user.findUnique({
+      where: { id: user.id },
     });
   }
 }

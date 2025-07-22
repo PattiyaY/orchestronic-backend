@@ -4,10 +4,12 @@ import {
   Body,
   Get,
   Query,
+  Request,
   NotFoundException,
   ConflictException,
   UseGuards,
 } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
 import { UserService } from './user.service';
 import { FindUserByEmailDto } from './dto/find-user-by-email.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -16,6 +18,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 import { AuthGuard } from '@nestjs/passport';
+import { CustomJWTPayload, RequestWithHeaders } from 'src/lib/types';
 
 // @ApiBearerAuth('access-token')
 // @UseGuards(AuthGuard('jwt'))
@@ -85,5 +88,32 @@ export class UserController {
     }
 
     return users;
+  }
+
+  @ApiBearerAuth('access-token')
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me')
+  @ApiOperation({
+    summary: 'Get all requests for the authenticated user',
+  })
+  findRequestsForUser(@Request() req: RequestWithHeaders) {
+    const authHeader = req.headers?.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('Authorization header missing or malformed');
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+      console.log('Request Controller: Decoding token...');
+      // Decode the token without verification to get payload
+      const decoded = jwt.decode(token) as CustomJWTPayload;
+      console.log('Request Controller: Token decoded successfully:', decoded);
+
+      return this.userService.findUserInfo(decoded);
+    } catch {
+      console.error('Request Controller: Error decoding token');
+      throw new Error('Invalid token - unable to process');
+    }
   }
 }

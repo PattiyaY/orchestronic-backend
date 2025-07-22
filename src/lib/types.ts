@@ -15,3 +15,9 @@ export interface CustomJWTPayload {
   tid?: string;
   appid?: string;
 }
+
+export interface RequestWithHeaders {
+  headers: {
+    authorization?: string;
+  };
+}
