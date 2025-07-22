@@ -26,6 +26,7 @@ import { CreateRequestDto } from './dto/create-request.dto';
 import { AuthGuard } from '@nestjs/passport';
 import * as jwt from 'jsonwebtoken';
 import { UpdateRequestStatusDto } from './dto/request-status.dto';
+import { CustomJWTPayload } from 'src/lib/types';
 
 interface RequestWithHeaders {
   headers: {
@@ -55,18 +56,22 @@ export class RequestController {
     return this.requestService.findById(+id);
   }
 
-  @Get()
-  @ApiQuery({ name: 'id', required: true, description: 'Format: R-[number]' })
-  @ApiOperation({
-    summary: 'Get request data by Request ID',
+  @Get(':displayCode')
+  @ApiQuery({
+    name: 'displayCode',
+    required: true,
+    description: 'Format: R-[number]',
   })
-  findWithRequestID(@Query('id') id: string) {
+  @ApiOperation({
+    summary: 'Get request data by displayCode',
+  })
+  findWithRequestDisplayCode(@Query('displayCode') id: string) {
     if (!/^R-\d+$/.test(id)) {
       throw new BadRequestException(
-        'Invalid ID format. Expected format: R-<number>',
+        'Invalid displayCode format. Expected format: R-<number>',
       );
     }
-    return this.requestService.findWithRequestID(id);
+    return this.requestService.findWithRequestDisplayCode(id);
   }
 
   @Post()
@@ -85,7 +90,7 @@ export class RequestController {
     try {
       console.log('Request Controller: Decoding token...');
       // Decode the token without verification to get payload
-      const decoded = jwt.decode(token);
+      const decoded = jwt.decode(token) as CustomJWTPayload;
       console.log('Request Controller: Token decoded successfully:', decoded);
 
       return this.requestService.createRequest(request, decoded);

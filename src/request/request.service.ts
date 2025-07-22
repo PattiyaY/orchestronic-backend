@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ApiBody } from '@nestjs/swagger';
-import { Resources, Repository, User } from '@prisma/client';
+import { Repository } from '@prisma/client';
+import { CustomJWTPayload } from 'src/lib/types';
 
 @Injectable()
 export class RequestService {
@@ -32,7 +33,7 @@ export class RequestService {
   }
 
   @ApiBody({ type: CreateRequestDto })
-  async createRequest(dto: CreateRequestDto, user: any) {
+  async createRequest(dto: CreateRequestDto, user: CustomJWTPayload) {
     const { repository, resources, ...request } = dto;
 
     const ownerId = user.id;
@@ -74,17 +75,29 @@ export class RequestService {
       },
     });
 
-    const newRepository = await this.databaseService.repository.create({
-      data: {
-        name: repository.name,
-        description: repository.description,
-        resources: {
-          connect: {
-            id: newResource.id,
+    let newRepository: Repository;
+    try {
+      newRepository = await this.databaseService.repository.create({
+        data: {
+          name: repository.name,
+          description: repository.description,
+          resources: {
+            connect: {
+              id: newResource.id,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException(
+            `A repository with the name '${repository.name}' already exists. Please choose a different name.`,
+          );
+        }
+      }
+      throw error;
+    }
 
     const last = await this.databaseService.request.findFirst({
       orderBy: { createdAt: 'desc' },
@@ -134,9 +147,9 @@ export class RequestService {
     });
   }
 
-  async findWithRequestID(id: string) {
-    const request = this.databaseService.request.findUnique({
-      where: { id },
+  async findWithRequestDisplayCode(displayCode: string) {
+    const request = await this.databaseService.request.findUnique({
+      where: { displayCode },
       include: {
         resources: true,
         repository: true,
@@ -145,7 +158,7 @@ export class RequestService {
     });
 
     if (!request) {
-      throw new Error(`Request with ID ${id} not found`);
+      throw new Error(`Request with displayCode ${displayCode} not found`);
     }
 
     return request;
