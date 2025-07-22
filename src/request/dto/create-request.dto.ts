@@ -5,14 +5,6 @@ import { CreateResourceDto } from '../../resource/dto/create-resource.dto';
 
 export class CreateRequestDto {
   @IsString()
-  @IsNotEmpty()
-  @ApiProperty({
-    example: 'owner-id',
-    description: 'The ID of the user making the request',
-  })
-  ownerId: string;
-
-  @IsString()
   @IsOptional()
   @ApiProperty({
     example: 'Request description',
