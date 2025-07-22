@@ -56,14 +56,11 @@ export class RequestController {
     return this.requestService.findById(+id);
   }
 
-  @Get(':displayCode')
+  @Get('displayCode')
   @ApiQuery({
     name: 'displayCode',
-    required: true,
     description: 'Format: R-[number]',
-  })
-  @ApiOperation({
-    summary: 'Get request data by displayCode',
+    required: true,
   })
   findWithRequestDisplayCode(@Query('displayCode') id: string) {
     if (!/^R-\d+$/.test(id)) {
