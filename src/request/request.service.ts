@@ -10,8 +10,9 @@ import { CustomJWTPayload } from 'src/lib/types';
 export class RequestService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async findAll() {
+  async findAll(user: CustomJWTPayload) {
     return await this.databaseService.request.findMany({
+      where: { ownerId: user.id },
       include: {
         resources: true,
         repository: true,

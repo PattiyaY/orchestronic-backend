@@ -27,12 +27,7 @@ import { AuthGuard } from '@nestjs/passport';
 import * as jwt from 'jsonwebtoken';
 import { UpdateRequestStatusDto } from './dto/request-status.dto';
 import { CustomJWTPayload } from 'src/lib/types';
-
-interface RequestWithHeaders {
-  headers: {
-    authorization?: string;
-  };
-}
+import { RequestWithHeaders } from 'src/lib/types';
 
 @ApiBearerAuth('access-token')
 @UseGuards(AuthGuard('jwt'))
@@ -41,8 +36,25 @@ export class RequestController {
   constructor(private readonly requestService: RequestService) {}
 
   @Get()
-  findAll() {
-    return this.requestService.findAll();
+  findAll(@Request() req: RequestWithHeaders) {
+    const authHeader = req.headers?.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('Authorization header missing or malformed');
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+      console.log('Request Controller: Decoding token...');
+      // Decode the token without verification to get payload
+      const decoded = jwt.decode(token) as CustomJWTPayload;
+      console.log('Request Controller: Token decoded successfully:', decoded);
+
+      return this.requestService.findAll(decoded);
+    } catch {
+      console.error('Request Controller: Error decoding token');
+      throw new Error('Invalid token - unable to process');
+    }
   }
 
   @Get('status')
