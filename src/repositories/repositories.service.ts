@@ -2,15 +2,38 @@ import { Injectable, UseGuards } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateRepositoriesDto } from './dto/create-repository.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { CustomJWTPayload } from 'src/lib/types';
 
 @Injectable()
 export class RepositoriesService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async findAll() {
-    return await this.databaseService.repository.findMany({
-      include: { resources: true, collaborators: true, request: true },
+  async findAll(user: CustomJWTPayload) {
+    const repoIds = await this.databaseService.request.findMany({
+      where: {
+        ownerId: user.id,
+      },
+      select: {
+        repositoryId: true,
+      },
     });
+
+    const repositoryIdList = repoIds.map((r) => r.repositoryId);
+
+    const listOfRepo = await this.databaseService.repository.findMany({
+      where: {
+        id: {
+          in: repositoryIdList,
+        },
+      },
+      include: {
+        resources: true,
+        collaborators: true,
+        request: true,
+      },
+    });
+
+    return listOfRepo;
   }
 
   async findByName(name: string) {
