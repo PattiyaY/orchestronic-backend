@@ -26,7 +26,7 @@ import { CreateRequestDto } from './dto/create-request.dto';
 import { AuthGuard } from '@nestjs/passport';
 import * as jwt from 'jsonwebtoken';
 import { UpdateRequestStatusDto } from './dto/request-status.dto';
-import { CustomJWTPayload } from 'src/lib/types';
+import { AzureADJwtPayload } from 'src/lib/types';
 import { RequestWithHeaders } from 'src/lib/types';
 
 @ApiBearerAuth('access-token')
@@ -45,10 +45,10 @@ export class RequestController {
     const token = authHeader.split(' ')[1];
 
     try {
-      console.log('Request Controller: Decoding token...');
+      // console.log('Request Controller: Decoding token...');
       // Decode the token without verification to get payload
-      const decoded = jwt.decode(token) as CustomJWTPayload;
-      console.log('Request Controller: Token decoded successfully:', decoded);
+      const decoded = jwt.decode(token) as AzureADJwtPayload;
+      // console.log('Request Controller: Token decoded successfully:', decoded);
 
       return this.requestService.findAll(decoded);
     } catch {
@@ -97,10 +97,10 @@ export class RequestController {
     const token = authHeader.split(' ')[1];
 
     try {
-      console.log('Request Controller: Decoding token...');
+      // console.log('Request Controller: Decoding token...');
       // Decode the token without verification to get payload
-      const decoded = jwt.decode(token) as CustomJWTPayload;
-      console.log('Request Controller: Token decoded successfully:', decoded);
+      const decoded = jwt.decode(token) as AzureADJwtPayload;
+      // console.log('Request Controller: Token decoded successfully:', decoded);
 
       return this.requestService.createRequest(request, decoded);
     } catch {

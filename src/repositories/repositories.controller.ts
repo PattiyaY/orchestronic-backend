@@ -4,7 +4,7 @@ import { RepositoriesService } from './repositories.service';
 import { CreateRepositoriesDto } from './dto/create-repository.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { CustomJWTPayload, RequestWithHeaders } from 'src/lib/types';
+import { AzureADJwtPayload, RequestWithHeaders } from 'src/lib/types';
 import * as jwt from 'jsonwebtoken';
 
 @Controller('repositories')
@@ -32,10 +32,10 @@ export class RepositoriesController {
     const token = authHeader.split(' ')[1];
 
     try {
-      console.log('Request Controller: Decoding token...');
+      // console.log('Request Controller: Decoding token...');
       // Decode the token without verification to get payload
-      const decoded = jwt.decode(token) as CustomJWTPayload;
-      console.log('Request Controller: Token decoded successfully:', decoded);
+      const decoded = jwt.decode(token) as AzureADJwtPayload;
+      // console.log('Request Controller: Token decoded successfully:', decoded);
 
       return this.repositoriesService.findAll(decoded);
     } catch {

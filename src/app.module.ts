@@ -9,14 +9,10 @@ import { UserController } from './user/user.controller';
 import { UserModule } from './user/user.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { APP_GUARD } from '@nestjs/core';
 import { RepositoriesModule } from './repositories/repositories.module';
 import { RepositoriesController } from './repositories/repositories.controller';
 import { RepositoriesService } from './repositories/repositories.service';
 import { AuthModule } from './auth/auth.module';
-import { use } from 'passport';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
-import { JwtStrategy } from './auth/strategies/jwt.strategy';
 import { ResourceModule } from './resource/resource.module';
 @Module({
   imports: [
@@ -47,7 +43,6 @@ import { ResourceModule } from './resource/resource.module';
     // { provide: APP_GUARD, useClass: JwtAuthGuard },
     AppService,
     RepositoriesService,
-    JwtStrategy,
   ],
 })
 export class AppModule {}

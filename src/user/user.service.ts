@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from '@prisma/client';
-import { CustomJWTPayload } from 'src/lib/types';
+import { AzureADJwtPayload } from 'src/lib/types';
 
 @Injectable()
 export class UserService {
@@ -21,6 +21,12 @@ export class UserService {
   async findOne(email: string): Promise<User | null> {
     return await this.databaseService.user.findUnique({
       where: { email },
+    });
+  }
+
+  async findById(id: string): Promise<User | null> {
+    return await this.databaseService.user.findUnique({
+      where: { id },
     });
   }
 
@@ -48,7 +54,7 @@ export class UserService {
     });
   }
 
-  async findUserInfo(user: CustomJWTPayload) {
+  async findUserInfo(user: AzureADJwtPayload) {
     return await this.databaseService.user.findUnique({
       where: { id: user.id },
     });
