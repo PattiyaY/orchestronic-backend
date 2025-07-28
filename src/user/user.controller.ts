@@ -18,7 +18,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 import { BackendJwtPayload, RequestWithHeaders } from 'src/lib/types';
-import { extractToken } from 'src/lib/extract-token';
+import { extractToken } from '../lib/extract-token';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 // @ApiBearerAuth('access-token')

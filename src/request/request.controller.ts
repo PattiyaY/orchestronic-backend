@@ -28,7 +28,7 @@ import * as jwt from 'jsonwebtoken';
 import { UpdateRequestStatusDto } from './dto/request-status.dto';
 import { BackendJwtPayload } from 'src/lib/types';
 import { RequestWithHeaders } from 'src/lib/types';
-import { extractToken } from 'src/lib/extract-token';
+import { extractToken } from '../lib/extract-token';
 
 @ApiBearerAuth('access-token')
 @UseGuards(AuthGuard('jwt'))
