@@ -20,11 +20,4 @@ export class AuthRefreshResponseDto {
     type: String,
   })
   accessToken: string;
-
-  @ApiProperty({
-    description: 'New refresh token (token rotation)',
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-    type: String,
-  })
-  refreshToken: string;
 }

@@ -17,9 +17,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { User } from '@prisma/client';
-import { AuthGuard } from '@nestjs/passport';
 import { BackendJwtPayload, RequestWithHeaders } from 'src/lib/types';
-import { de } from '@faker-js/faker/.';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 // @ApiBearerAuth('access-token')
 // @UseGuards(AuthGuard('jwt'))
@@ -92,7 +91,7 @@ export class UserController {
   }
 
   @ApiBearerAuth('access-token')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @Get('me')
   @ApiOperation({
     summary: 'Get all requests for the authenticated user',
@@ -107,8 +106,6 @@ export class UserController {
 
     try {
       const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      console.log(decoded);
 
       return this.userService.findByEmail(decoded.email ?? '');
     } catch {

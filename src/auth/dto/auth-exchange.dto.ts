@@ -20,4 +20,11 @@ export class AuthExchangeResponseDto {
     type: String,
   })
   accessToken: string;
+
+  // @ApiProperty({
+  //   description: 'Backend refresh token for API authentication',
+  //   example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  //   type: String,
+  // })
+  // refreshToken: string;
 }

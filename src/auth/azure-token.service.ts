@@ -28,10 +28,6 @@ export class AzureTokenService {
 
   async verifyAzureToken(token: string): Promise<CustomJWTPayload | null> {
     try {
-      console.log(
-        'Step 1: Decoding token without verification to get header...',
-      );
-
       // Decode token without verification to get the header
 
       const decoded = jwt.decode(token, { complete: true });
@@ -47,13 +43,9 @@ export class AzureTokenService {
         return null;
       }
 
-      console.log('Step 2: Token decoded, kid:', decoded.header.kid);
-
       const kid = decoded.header.kid;
 
       // Get the public key for this kid
-
-      console.log('Step 3: Getting public key for kid:', kid);
 
       const publicKey = await this.getPublicKey(kid);
 
@@ -62,8 +54,6 @@ export class AzureTokenService {
 
         return null;
       }
-
-      console.log('Step 4: Public key retrieved, verifying token...');
 
       // First decode the token to get the payload for audience validation
 
@@ -74,14 +64,6 @@ export class AzureTokenService {
 
         return null;
       }
-
-      console.log('Token payload preview:', {
-        aud: decodedPayload.aud,
-
-        iss: decodedPayload.iss,
-
-        exp: decodedPayload.exp,
-      });
 
       // Get tenant ID and client ID from the decoded token if env vars not set
 
@@ -95,20 +77,6 @@ export class AzureTokenService {
         decodedPayload.appid ||
         'bfbb98d5-f4cf-4d6b-b6fc-487eecff1c69';
 
-      console.log('Using verification values:', {
-        tenantId,
-
-        clientId,
-
-        expectedAudience: `api://${clientId}`,
-
-        actualAudience: decodedPayload.aud,
-
-        expectedIssuer: `https://sts.windows.net/${tenantId}/`,
-
-        actualIssuer: decodedPayload.iss,
-      });
-
       // Verify the token with the correct Azure AD audience format
 
       const payload = jwt.verify(token, publicKey, {
@@ -118,8 +86,6 @@ export class AzureTokenService {
 
         audience: `api://${clientId}`, // Azure AD uses api://client-id format
       }) as CustomJWTPayload;
-
-      console.log('Step 5: Token verified successfully');
 
       return payload;
     } catch (error) {
@@ -146,12 +112,8 @@ export class AzureTokenService {
       const cacheExpiry = this.jwksCacheExpiry.get(kid);
 
       if (cached && cacheExpiry && Date.now() < cacheExpiry) {
-        console.log('Using cached public key for kid:', kid);
-
         return cached;
       }
-
-      console.log('Fetching JWKS from Azure...');
 
       // Fetch JWKS using native https module
 
@@ -192,8 +154,6 @@ export class AzureTokenService {
       this.jwksCache.set(kid, publicKey);
 
       this.jwksCacheExpiry.set(kid, Date.now() + 60 * 60 * 1000);
-
-      console.log('Public key cached for kid:', kid);
 
       return publicKey;
     } catch (error) {
