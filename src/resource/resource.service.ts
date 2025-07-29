@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateResourceDto } from './dto/create-resource.dto';
 import { UpdateResourceDto } from './dto/update-resource.dto';
 import { DatabaseService } from '../database/database.service';
+import { BackendJwtPayload } from '../lib/types';
 
 @Injectable()
 export class ResourceService {
@@ -11,8 +12,9 @@ export class ResourceService {
     return `this action add new resource`;
   }
 
-  findAll() {
+  findAll(user: BackendJwtPayload) {
     return this.databaseService.resources.findMany({
+      where: { request: { ownerId: user.id } },
       include: {
         resourceConfig: {
           include: {

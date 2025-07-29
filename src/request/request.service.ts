@@ -12,7 +12,7 @@ export class RequestService {
 
   async findAll(user: BackendJwtPayload) {
     return await this.databaseService.request.findMany({
-      where: { ownerId: user.email },
+      where: { ownerId: user.id },
       include: {
         resources: true,
         repository: true,
@@ -38,6 +38,7 @@ export class RequestService {
     const { repository, resources, ...request } = dto;
 
     const ownerId = user.id;
+    console.log('Creating request for owner:', ownerId);
     const resourceConfig = await this.databaseService.resourceConfig.create({
       data: {
         vms: {

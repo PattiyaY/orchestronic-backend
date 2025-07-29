@@ -114,7 +114,7 @@ model User {
   role  Role
 
   collaboratedRepos      Repository[]             @relation("RepositoryCollaborators")
-  request                Request?
+  request                Request[]
   UserRepository         ownedRepository[]
   RepositoryCollaborator RepositoryCollaborator[]
   RefreshToken           RefreshToken[]

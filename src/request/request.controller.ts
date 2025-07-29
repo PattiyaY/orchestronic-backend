@@ -41,11 +41,7 @@ export class RequestController {
     const token = extractToken(req);
 
     try {
-      // console.log('Request Controller: Decoding token...');
-      // Decode the token without verification to get payload
       const decoded = jwt.decode(token) as BackendJwtPayload;
-      // console.log('Request Controller: Token decoded successfully:', decoded);
-
       return this.requestService.findAll(decoded);
     } catch {
       console.error('Request Controller: Error decoding token');
@@ -87,11 +83,7 @@ export class RequestController {
   ) {
     const token = extractToken(req);
     try {
-      // console.log('Request Controller: Decoding token...');
-      // Decode the token without verification to get payload
       const decoded = jwt.decode(token) as BackendJwtPayload;
-      // console.log('Request Controller: Token decoded successfully:', decoded);
-
       return this.requestService.createRequest(request, decoded);
     } catch {
       console.error('Request Controller: Error decoding token');
