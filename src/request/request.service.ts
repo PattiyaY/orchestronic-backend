@@ -153,7 +153,17 @@ export class RequestService {
     const request = await this.databaseService.request.findUnique({
       where: { displayCode },
       include: {
-        resources: true,
+        resources: {
+          include: {
+            resourceConfig: {
+              include: {
+                vms: true,
+                dbs: true,
+                sts: true,
+              },
+            },
+          },
+        },
         repository: true,
         owner: true,
       },
