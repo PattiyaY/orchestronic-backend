@@ -181,7 +181,15 @@ export class RequestService {
             },
           },
         },
-        repository: true,
+        repository: {
+          include: {
+            RepositoryCollaborator: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
         owner: true,
       },
     });
