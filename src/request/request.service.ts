@@ -87,6 +87,11 @@ export class RequestService {
               id: newResource.id,
             },
           },
+          RepositoryCollaborator: {
+            create: repository.collaborators?.map((userId) => ({
+              user: { connect: { id: userId } },
+            })),
+          },
         },
       });
     } catch (error) {
