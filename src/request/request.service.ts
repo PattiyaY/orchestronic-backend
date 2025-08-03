@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, Status } from '@prisma/client';
+import { Prisma, Status, Role } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ApiBody } from '@nestjs/swagger';
@@ -132,6 +132,13 @@ export class RequestService {
     });
 
     return newRequest;
+  }
+
+  async updateRole(id: string, role: Role) {
+    return this.databaseService.user.update({
+      where: { id },
+      data: { role },
+    });
   }
 
   async updateRequestInfo(id: string, updateData: Prisma.RequestUpdateInput) {
