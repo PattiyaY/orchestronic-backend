@@ -15,7 +15,7 @@ export class CollaboratorDto {
     example: 'collaborator-id',
     description: 'ID of the collaborator',
   })
-  id: string;
+  userId: string;
 }
 
 export class CreateRepositoryDto {

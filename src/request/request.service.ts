@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
@@ -39,119 +41,88 @@ export class RequestService {
 
   @ApiBody({ type: CreateRequestDto })
   async createRequest(dto: CreateRequestDto, user: BackendJwtPayload) {
-    console.log(dto);
     const { repository, resources, ...request } = dto;
-
     const ownerId = user.id;
+
+    const ownerInDb = await this.databaseService.user.findUnique({
+      where: { id: ownerId },
+      select: { id: true },
+    });
+
+    if (!ownerInDb) {
+      throw new BadRequestException('Authenticated user not found in database');
+    }
+
+    // Check repository name uniqueness
+    const existingRepo = await this.databaseService.repository.findUnique({
+      where: { name: repository.name },
+    });
+    if (existingRepo)
+      throw new ConflictException('Repository name already exists');
+
+    // Verify collaborators exist
+    const collaboratorIds =
+      repository.collaborators?.map((c) => c.userId) || [];
+
+    const collaboratorsInDb = await this.databaseService.user.findMany({
+      where: { id: { in: collaboratorIds } },
+      select: { id: true },
+    });
+
+    if (collaboratorsInDb.length !== collaboratorIds.length) {
+      throw new BadRequestException('One or more collaborators not found');
+    }
+
+    // Create resourceConfig with VMs, DBs, STs
     const resourceConfig = await this.databaseService.resourceConfig.create({
       data: {
-        vms: {
-          create: resources.resourceConfig.vms?.map((vm) => ({
-            name: vm.name,
-            numberOfCores: vm.numberOfCores,
-            memory: vm.memory,
-            os: vm.os,
-          })),
-        },
-        dbs: {
-          create: resources.resourceConfig.dbs?.map((db) => ({
-            engine: db.engine,
-            storageGB: db.storageGB,
-          })),
-        },
-        sts: {
-          create: resources.resourceConfig.sts?.map((st) => ({
-            type: st.type,
-            capacityGB: st.capacityGB,
-          })),
-        },
+        vms: { create: resources.resourceConfig.vms || [] },
+        dbs: { create: resources.resourceConfig.dbs || [] },
+        sts: { create: resources.resourceConfig.sts || [] },
       },
     });
 
+    // Create Resources linked to resourceConfig
     const newResource = await this.databaseService.resources.create({
       data: {
         name: resources.name,
         cloudProvider: resources.cloudProvider,
         region: resources.region,
-        resourceConfig: {
-          connect: {
-            id: resourceConfig.id,
-          },
+        resourceConfig: { connect: { id: resourceConfig.id } },
+      },
+    });
+
+    // Create Repository with collaborators (using userId)
+    const newRepository = await this.databaseService.repository.create({
+      data: {
+        name: repository.name,
+        description: repository.description,
+        resources: { connect: { id: newResource.id } },
+        RepositoryCollaborator: {
+          create:
+            repository.collaborators?.map((c) => ({ userId: c.userId })) || [],
         },
       },
     });
 
-    let newRepository: Repository;
-    try {
-      newRepository = await this.databaseService.repository.create({
-        data: {
-          name: repository.name,
-          description: repository.description,
-          resources: {
-            connect: {
-              id: newResource.id,
-            },
-          },
-          RepositoryCollaborator: {
-            create: repository.collaborators?.map((collaborator) => ({
-              user: {
-                connect: { id: collaborator.id },
-              },
-            })),
-          },
-        },
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException(
-            `A repository with the name '${repository.name}' already exists. Please choose a different name.`,
-          );
-        }
-      }
-      throw error;
-    }
-
-    console.log('New repository created:', repository.collaborators);
-    if (repository.collaborators && repository.collaborators.length > 0) {
-      await this.databaseService.repositoryCollaborator.createMany({
-        data: repository.collaborators.map((collaborator) => ({
-          userId: collaborator.id,
-          repositoryId: newRepository.id,
-        })),
-      });
-    }
-
-    const last = await this.databaseService.request.findFirst({
+    // Generate displayCode for Request
+    const lastRequest = await this.databaseService.request.findFirst({
       orderBy: { createdAt: 'desc' },
       select: { displayCode: true },
     });
-
-    const lastNumber = last?.displayCode
-      ? parseInt(last.displayCode.split('-')[1])
+    const lastNumber = lastRequest
+      ? parseInt(lastRequest.displayCode.split('-')[1])
       : 0;
-
     const displayCode = `R-${lastNumber + 1}`;
 
+    // Create Request linking owner, repository, resources
     const newRequest = await this.databaseService.request.create({
       data: {
         description: request.description,
-        displayCode: displayCode,
-        owner: {
-          connect: {
-            id: ownerId,
-          },
-        },
-        repository: {
-          connect: {
-            id: newRepository.id,
-          },
-        },
-        resources: {
-          connect: {
-            id: newResource.id,
-          },
-        },
+        displayCode,
+        owner: { connect: { id: ownerId } },
+        repository: { connect: { id: newRepository.id } },
+        resources: { connect: { id: newResource.id } },
       },
       include: {
         resources: true,
