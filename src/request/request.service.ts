@@ -18,7 +18,17 @@ export class RequestService {
     return await this.databaseService.request.findMany({
       where: { ownerId: user.id },
       include: {
-        resources: true,
+        resources: {
+          include: {
+            resourceConfig: {
+              include: {
+                vms: true,
+                dbs: true,
+                sts: true,
+              },
+            },
+          },
+        },
         repository: true,
         owner: true,
       },
@@ -39,7 +49,6 @@ export class RequestService {
 
   @ApiBody({ type: CreateRequestDto })
   async createRequest(dto: CreateRequestDto, user: BackendJwtPayload) {
-    console.log(dto);
     const { repository, resources, ...request } = dto;
 
     const ownerId = user.id;
@@ -67,6 +76,8 @@ export class RequestService {
         },
       },
     });
+
+    console.log('Resource config created:', resourceConfig);
 
     const newResource = await this.databaseService.resources.create({
       data: {
@@ -119,6 +130,7 @@ export class RequestService {
           userId: collaborator.id,
           repositoryId: newRepository.id,
         })),
+        skipDuplicates: true,
       });
     }
 
@@ -150,11 +162,22 @@ export class RequestService {
         resources: {
           connect: {
             id: newResource.id,
+            resourceConfigId: resourceConfig.id,
           },
         },
       },
       include: {
-        resources: true,
+        resources: {
+          include: {
+            resourceConfig: {
+              include: {
+                vms: true,
+                dbs: true,
+                sts: true,
+              },
+            },
+          },
+        },
         repository: true,
         owner: true,
       },
