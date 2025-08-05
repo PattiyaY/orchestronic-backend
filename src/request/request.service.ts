@@ -205,7 +205,9 @@ export class RequestService {
           },
         },
         repository: {
-          include: {
+          select: {
+            id: true,
+            name: true,
             RepositoryCollaborator: {
               include: {
                 user: true,
