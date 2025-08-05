@@ -18,13 +18,29 @@ export class ResourceService {
       include: {
         resourceConfig: {
           include: {
-            vms: true,
-            dbs: true,
-            sts: true,
+            vms: {
+              select: {
+                id: true,
+              },
+            },
+            dbs: {
+              select: {
+                id: true,
+              },
+            },
+            sts: {
+              select: {
+                id: true,
+              },
+            },
           },
         },
-        repository: true,
-        request: true,
+        repository: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
   }

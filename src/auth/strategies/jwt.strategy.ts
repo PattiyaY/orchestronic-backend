@@ -6,13 +6,11 @@ import { BackendJwtPayload } from '../../lib/types';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
-    console.log('🚀 JWT Strategy constructor called - strategy initialized');
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: 'eSo3PoOYP7BhJFaqfnsKz52mo3cpV1vb3M38IGzaFt4=',
     });
-    console.log('✅ JWT Strategy configuration complete');
   }
 
   validate(payload: BackendJwtPayload) {

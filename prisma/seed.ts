@@ -5,9 +5,9 @@ async function main() {
   console.log('🌱 Starting database seeding...');
 
   await import('./seed/seed-azure-vm-size');
-  await import('./seed/seed-user');
-  await import('./seed/seed-repositories');
-  await import('./seed/seed-request');
+  // await import('./seed/seed-user');
+  // await import('./seed/seed-repositories');
+  // await import('./seed/seed-request');
 
   console.log('✅ Seeding complete.');
 }

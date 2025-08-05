@@ -78,10 +78,10 @@ model ResourceConfig {
 model VMInstance {
   id String @id @default(uuid())
 
-  name          String
-  numberOfCores Int
-  memory        Int
-  os            String
+  name   String
+  os     String
+  size   AzureVMSize @relation(fields: [sizeId], references: [id])
+  sizeId String
 
   resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id])
   resourceConfigId String
@@ -168,13 +168,14 @@ model CloudResourceSecret {
 }
 
 model AzureVMSize {
-  id                   String @id @default(uuid())
-  name                 String @unique
+  id                   String       @id @default(uuid())
+  name                 String       @unique
   numberOfCores        Int
   maxDataDiskCount     Int
   memoryInMB           Int
   osDiskSizeInMB       Int
   resourceDiskSizeInMB Int
+  VMInstance           VMInstance[]
 }
 
 enum CloudProvider {

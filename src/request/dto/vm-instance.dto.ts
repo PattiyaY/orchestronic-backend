@@ -30,4 +30,11 @@ export class CreateVMInstanceDto {
   })
   @IsString()
   os: string;
+
+  @ApiProperty({
+    example: 'size-id',
+    description: 'The ID of the Azure VM size for the instance',
+  })
+  @IsString()
+  sizeId: string;
 }

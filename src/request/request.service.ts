@@ -18,20 +18,23 @@ export class RequestService {
   async findAll(user: BackendJwtPayload) {
     return await this.databaseService.request.findMany({
       where: { ownerId: user.id },
-      include: {
+      select: {
+        id: true,
+        displayCode: true,
+        createdAt: true,
+        status: true,
         resources: {
-          include: {
-            resourceConfig: {
-              include: {
-                vms: true,
-                dbs: true,
-                sts: true,
-              },
-            },
+          select: {
+            id: true,
+            name: true,
           },
         },
-        repository: true,
-        owner: true,
+        repository: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
   }
@@ -85,9 +88,21 @@ export class RequestService {
     // Create resourceConfig with VMs, DBs, STs
     const resourceConfig = await this.databaseService.resourceConfig.create({
       data: {
-        vms: { create: resources.resourceConfig.vms || [] },
-        dbs: { create: resources.resourceConfig.dbs || [] },
-        sts: { create: resources.resourceConfig.sts || [] },
+        vms: {
+          create: (resources.resourceConfig.vms || []).map((vm) => ({
+            name: vm.name,
+            numberOfCores: vm.numberOfCores,
+            memory: vm.memory,
+            os: vm.os,
+            sizeId: vm.sizeId,
+          })),
+        },
+        dbs: {
+          create: resources.resourceConfig.dbs || [],
+        },
+        sts: {
+          create: resources.resourceConfig.sts || [],
+        },
       },
     });
 
@@ -178,7 +193,11 @@ export class RequestService {
           include: {
             resourceConfig: {
               include: {
-                vms: true,
+                vms: {
+                  include: {
+                    size: true,
+                  },
+                },
                 dbs: true,
                 sts: true,
               },

@@ -16,7 +16,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RequestService } from './request.service';
-import { Prisma, Role, Status } from '@prisma/client';
+import { Prisma, Status } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiBody,
