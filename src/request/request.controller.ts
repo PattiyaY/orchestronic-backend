@@ -21,6 +21,7 @@ import {
   ApiBody,
   ApiOperation,
   ApiQuery,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -29,6 +30,8 @@ import { UpdateRequestStatusDto } from './dto/request-status.dto';
 import { BackendJwtPayload } from '../lib/types';
 import { RequestWithHeaders } from '../lib/types';
 import { extractToken } from '../lib/extract-token';
+import { GetVmSizesDto } from './dto/get-vm-sizes.dto';
+import { PaginatedVmSizesDto } from './dto/paginated-vm-sizes.dto';
 
 @ApiBearerAuth('access-token')
 @UseGuards(AuthGuard('jwt'))
@@ -53,6 +56,21 @@ export class RequestController {
   @ApiQuery({ name: 'status', enum: Status })
   findByStatus(@Query('status') status: Status) {
     return this.requestService.findByStatus(status);
+  }
+
+  @ApiOperation({
+    summary: 'Get available VM sizes',
+    description:
+      'Retrieves a list of available VM sizes from Azure with pagination and filtering',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'VM sizes retrieved successfully',
+    type: PaginatedVmSizesDto,
+  })
+  @Get('vm-sizes')
+  getVmSizes(@Query() query: GetVmSizesDto) {
+    return this.requestService.getVmSizesPaginated(query);
   }
 
   @Get('displayCode')

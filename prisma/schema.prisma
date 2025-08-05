@@ -27,7 +27,7 @@ model Request {
   repositoryId String     @unique
 
   resources   Resources @relation(fields: [resourcesId], references: [id])
-  resourcesId String @unique
+  resourcesId String    @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -157,17 +157,25 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-
 model CloudResourceSecret {
-  id             String         @id @default(uuid())
-  clientId       String         @unique
+  id             String        @id @default(uuid())
+  clientId       String        @unique
   clientSecret   String
-  subscriptionId String         @unique
+  subscriptionId String        @unique
   tenantId       String?
   userId         String
   cloudProvider  CloudProvider
 }
 
+model AzureVMSize {
+  id                   String @id @default(uuid())
+  name                 String @unique
+  numberOfCores        Int
+  maxDataDiskCount     Int
+  memoryInMB           Int
+  osDiskSizeInMB       Int
+  resourceDiskSizeInMB Int
+}
 
 enum CloudProvider {
   AWS

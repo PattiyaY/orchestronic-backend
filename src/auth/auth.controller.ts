@@ -2,13 +2,12 @@ import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { AzureTokenService } from './azure-token.service';
 import { ShortTokenService } from './short-token.service';
 import { UserService } from '../user/user.service';
+import { RequestService } from '../request/request.service';
 import {
   AuthExchangeDto,
   AuthExchangeResponseDto,
 } from './dto/auth-exchange.dto';
 import { Public } from './public.decorator';
-import { JwtService } from '@nestjs/jwt';
-import { DatabaseService } from '../database/database.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Authentication')
@@ -18,8 +17,6 @@ export class AuthController {
     private azureTokenService: AzureTokenService,
     private shortTokenService: ShortTokenService,
     private userService: UserService,
-    private jwtService: JwtService,
-    private databaseService: DatabaseService,
   ) {}
 
   @Public()

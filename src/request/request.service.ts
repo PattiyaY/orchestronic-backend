@@ -9,7 +9,6 @@ import { Prisma, Status } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ApiBody } from '@nestjs/swagger';
-import { Repository } from '@prisma/client';
 import { BackendJwtPayload } from '../lib/types';
 
 @Injectable()
@@ -205,5 +204,114 @@ export class RequestService {
     return this.databaseService.request.delete({
       where: { id: id.toString() },
     });
+  }
+
+  async getVmSizes() {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return await (this.databaseService as any).azureVMSize.findMany();
+    } catch (error) {
+      console.error('Error fetching VM sizes:', error);
+      throw new InternalServerErrorException('Failed to fetch VM sizes');
+    }
+  }
+
+  async getVmSizesPaginated(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    minCores?: number;
+    maxCores?: number;
+    minMemory?: number;
+    maxMemory?: number;
+  }) {
+    try {
+      const {
+        page = 1,
+        limit = 20,
+        search,
+        minCores,
+        maxCores,
+        minMemory,
+        maxMemory,
+      } = params;
+
+      // Build the where clause for filtering
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const where: any = {};
+
+      if (search) {
+        where.name = {
+          contains: search,
+          mode: 'insensitive',
+        };
+      }
+
+      if (minCores !== undefined || maxCores !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const coresFilter: any = {};
+        if (minCores !== undefined) {
+          coresFilter.gte = minCores;
+        }
+        if (maxCores !== undefined) {
+          coresFilter.lte = maxCores;
+        }
+        where.numberOfCores = coresFilter;
+      }
+
+      if (minMemory !== undefined || maxMemory !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const memoryFilter: any = {};
+        if (minMemory !== undefined) {
+          memoryFilter.gte = minMemory;
+        }
+        if (maxMemory !== undefined) {
+          memoryFilter.lte = maxMemory;
+        }
+        where.memoryInMB = memoryFilter;
+      }
+
+      // Calculate offset
+      const skip = (page - 1) * limit;
+
+      // Get total count for pagination
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const total = await (this.databaseService as any).azureVMSize.count({
+        where,
+      });
+
+      // Get paginated data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await (this.databaseService as any).azureVMSize.findMany({
+        where,
+        skip,
+        take: Number(limit),
+        orderBy: [
+          { numberOfCores: 'asc' },
+          { memoryInMB: 'asc' },
+          { name: 'asc' },
+        ],
+      });
+
+      // Calculate pagination metadata
+      const totalPages = Math.ceil(total / limit);
+      const hasNext = page < totalPages;
+      const hasPrev = page > 1;
+
+      return {
+        data,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages,
+          hasNext,
+          hasPrev,
+        },
+      };
+    } catch (error) {
+      console.error('Error fetching VM sizes:', error);
+      throw new InternalServerErrorException('Failed to fetch VM sizes');
+    }
   }
 }

@@ -5,7 +5,8 @@ import { CustomJWTPayload } from '../lib/types';
 import * as jwt from 'jsonwebtoken';
 
 import * as https from 'https';
-
+import * as path from 'path';
+import * as fs from 'fs';
 interface JWK {
   kid: string;
 
