@@ -126,35 +126,6 @@ export class RequestController {
     }
   }
 
-  @Patch('/role')
-  @ApiOperation({
-    summary: 'Update user role by user ID',
-  })
-  updateRole(
-    @Body() roleUpdate: UpdateRoleDto,
-    @Request() req: RequestWithHeaders,
-  ) {
-    const token = extractToken(req);
-
-    try {
-      const user = jwt.decode(token) as BackendJwtPayload;
-
-      if (!user) {
-        throw new UnauthorizedException('User not authenticated');
-      }
-
-      if (user.role !== 'Admin' && user.role !== 'IT') {
-        throw new ForbiddenException(
-          'You do not have permission to update roles',
-        );
-      }
-
-      return this.requestService.updateRole(roleUpdate.id, roleUpdate.role);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid token - unable to process');
-    }
-  }
-
   @Patch(':id')
   updateRequestInfo(
     @Param('id') id: string,

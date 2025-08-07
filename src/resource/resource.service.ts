@@ -16,6 +16,12 @@ export class ResourceService {
     return this.databaseService.resources.findMany({
       where: { request: { ownerId: user.id } },
       include: {
+        request: {
+          select: {
+            id: true,
+            displayCode: true,
+          },
+        },
         resourceConfig: {
           include: {
             vms: {

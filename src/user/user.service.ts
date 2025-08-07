@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { User } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import { BackendJwtPayload } from '../lib/types';
 
 @Injectable()
@@ -15,6 +15,13 @@ export class UserService {
         email: user.email,
         role: user.role,
       },
+    });
+  }
+
+  async updateRole(id: string, role: Role) {
+    return this.databaseService.user.update({
+      where: { id },
+      data: { role },
     });
   }
 

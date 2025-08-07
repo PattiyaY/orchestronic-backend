@@ -179,13 +179,6 @@ export class RequestService {
     return newRequest;
   }
 
-  async updateRole(id: string, role: Role) {
-    return this.databaseService.user.update({
-      where: { id },
-      data: { role },
-    });
-  }
-
   async updateRequestInfo(id: string, updateData: Prisma.RequestUpdateInput) {
     return this.databaseService.request.update({
       where: { id: id.toString() },
