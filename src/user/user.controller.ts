@@ -24,6 +24,7 @@ import { BackendJwtPayload, RequestWithHeaders } from '../lib/types';
 import { extractToken } from '../lib/extract-token';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateRoleDto } from '../request/dto/update-role.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 // @ApiBearerAuth('access-token')
 // @UseGuards(AuthGuard('jwt'))
@@ -45,6 +46,8 @@ export class UserController {
     return users;
   }
 
+  @ApiBearerAuth('access-token')
+  @UseGuards(AuthGuard('jwt'))
   @Patch('/role')
   @ApiOperation({
     summary: 'Update user role by user ID',
