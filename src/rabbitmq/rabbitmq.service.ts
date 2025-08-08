@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { timeout } from 'rxjs';
+import { lastValueFrom, timeout } from 'rxjs';
 
 @Injectable()
 export class RabbitmqService {
@@ -13,13 +13,15 @@ export class RabbitmqService {
     return { message: 'Request queued successfully', requestId };
   }
 
-  getRequest() {
-    return this.rabbitClient
-      .send('request', {})
-      .pipe(timeout(10000))
-      .toPromise()
-      .catch((err) => {
-        console.error('Timeout or error:', err);
-      });
+  async getRequest() {
+    try {
+      const response = await lastValueFrom(
+        this.rabbitClient.send('request', {}).pipe(timeout(10000)),
+      );
+      return response;
+    } catch (err) {
+      console.error('Timeout or error:', err);
+      throw err; // optional: rethrow or return fallback
+    }
   }
 }
