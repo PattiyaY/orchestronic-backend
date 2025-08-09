@@ -5,16 +5,16 @@ import { RequestDto } from './rabbitmq/dto/request.dto';
 export class AppService {
   request: RequestDto[] = [];
 
-  handleRequest(data: any): { success: boolean; message: string } {
-    console.log('Processing request:', data);
+  // handleRequest(data: any): { success: boolean; message: string } {
+  //   console.log('Processing request:', data);
 
-    // this.request.push(data);
+  //   // this.request.push(data);
 
-    return {
-      success: true,
-      message: 'Request processed successfully',
-    };
-  }
+  //   return {
+  //     success: true,
+  //     message: 'Request processed successfully',
+  //   };
+  // }
 
   getConnection(): { success: boolean; message: string } {
     return {
