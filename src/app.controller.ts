@@ -19,8 +19,8 @@ export class AppController {
     };
   }
 
-  @EventPattern('request')
-  handleRequest(data: any) {
-    return this.appService.handleRequest(data);
-  }
+  // @EventPattern('request')
+  // handleRequest(data: any) {
+  //   return this.appService.handleRequest(data);
+  // }
 }
