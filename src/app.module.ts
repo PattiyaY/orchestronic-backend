@@ -21,7 +21,7 @@ import { RabbitmqController } from './rabbitmq/rabbitmq.controller';
 import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
 import { AirflowModule } from './airflow/airflow.module';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { CloudModule } from './cloud/cloud.module';
+// import { CloudModule } from './cloud/cloud.module';
 
 @Module({
   imports: [
@@ -58,7 +58,7 @@ import { CloudModule } from './cloud/cloud.module';
     AuthModule,
     RabbitmqModule,
     AirflowModule,
-    CloudModule,
+    // CloudModule,
   ],
   controllers: [
     AppController,
