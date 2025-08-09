@@ -8,7 +8,7 @@ export class AppService {
   handleRequest(data: any): { success: boolean; message: string } {
     console.log('Processing request:', data);
 
-    this.request.push(data);
+    // this.request.push(data);
 
     return {
       success: true,
