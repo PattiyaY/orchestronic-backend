@@ -171,7 +171,7 @@ export class RequestController {
   @ApiOperation({
     summary: 'Update request feedback by request ID',
   })
-  async updateRequestFeedback(
+  updateRequestFeedback(
     @Param('id') id: string,
     @Body() feedback: UpdateFeedbackDto,
     @Req() req: RequestWithHeaders,

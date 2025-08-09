@@ -8,13 +8,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CloudService } from './cloud.service';
-import { Secret } from 'jsonwebtoken';
 import { SecretDto } from './dto/secret.dto';
-import { RequestWithHeaders } from 'src/lib/types';
-import { extractToken } from 'src/lib/extract-token';
+import { RequestWithHeaders } from '../lib/types';
+import { extractToken } from '../lib/extract-token';
 import * as jwt from 'jsonwebtoken';
-import { BackendJwtPayload } from 'src/lib/types';
-import { U } from '@faker-js/faker/dist/airline-BUL6NtOJ';
+import { BackendJwtPayload } from '../lib/types';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 

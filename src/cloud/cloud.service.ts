@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from 'src/database/database.service';
-import { BackendJwtPayload } from 'src/lib/types';
+import { DatabaseService } from '../database/database.service';
+import { BackendJwtPayload } from '../lib/types';
 import { SecretDto } from './dto/secret.dto';
 import { CloudProvider } from '@prisma/client';
 
