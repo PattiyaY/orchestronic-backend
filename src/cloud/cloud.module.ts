@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { CloudController } from './cloud.controller';
 import { CloudService } from './cloud.service';
-import { DatabaseService } from '../database/database.service';
+import { DatabaseModule } from '../database/database.module';
 
 @Module({
+  imports: [DatabaseModule],
   controllers: [CloudController],
-  providers: [CloudService, DatabaseService],
+  providers: [CloudService],
 })
 export class CloudModule {}

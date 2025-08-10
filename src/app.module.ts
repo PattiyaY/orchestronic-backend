@@ -58,7 +58,7 @@ import { CloudModule } from './cloud/cloud.module';
     AuthModule,
     RabbitmqModule,
     AirflowModule,
-    // CloudModule,
+    CloudModule,
   ],
   controllers: [
     AppController,
