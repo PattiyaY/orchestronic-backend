@@ -33,7 +33,6 @@ import { RequestWithHeaders } from '../lib/types';
 import { extractToken } from '../lib/extract-token';
 import { GetVmSizesDto } from './dto/get-vm-sizes.dto';
 import { PaginatedVmSizesDto } from './dto/paginated-vm-sizes.dto';
-import { UpdateRoleDto } from './dto/update-role.dto';
 import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 
 @ApiBearerAuth('access-token')
