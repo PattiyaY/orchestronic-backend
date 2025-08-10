@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { BackendJwtPayload } from '../lib/types';
 import { SecretDto } from './dto/secret.dto';
-import { CloudProvider } from '@prisma/client';
+// import { CloudProvider } from '@prisma/client';
 
 @Injectable()
 export class CloudService {
@@ -25,10 +25,7 @@ export class CloudService {
     return this.databaseService.cloudResourceSecret.create({
       data: {
         ...secretData,
-        cloudProvider:
-          secretData.cloudProvider === CloudProvider.AZURE
-            ? CloudProvider.AZURE
-            : CloudProvider.AWS,
+        cloudProvider: secretData.cloudProvider === 'AZURE' ? 'AZURE' : 'AWS',
         userId: user.id,
       },
     });
