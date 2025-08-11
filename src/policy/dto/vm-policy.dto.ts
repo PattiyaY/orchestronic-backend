@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { CloudProvider } from '@prisma/client';
+import { IsEnum, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class VMPolicyDto {
   @IsNotEmpty()
@@ -16,7 +17,7 @@ export class VMPolicyDto {
     example: 4,
     description: 'The number of CPU cores allocated for the virtual machine',
   })
-  noOfCores: number;
+  numberOfCores: number;
 
   @IsNotEmpty()
   @IsNumber()
@@ -25,5 +26,13 @@ export class VMPolicyDto {
     description:
       'The amount of memory (in GB) allocated for the virtual machine',
   })
-  memory: number;
+  memoryInMB: number;
+
+  @IsNotEmpty()
+  @IsEnum(CloudProvider)
+  @ApiProperty({
+    example: CloudProvider.AZURE,
+    description: 'The cloud provider for the virtual machine',
+  })
+  cloudProvider: CloudProvider;
 }

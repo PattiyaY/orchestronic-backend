@@ -66,4 +66,43 @@ export class PolicyService {
       data: { ...policyData },
     });
   }
+
+  getPolicyVM(user: BackendJwtPayload) {
+    if (user.role !== Role.Admin && user.role !== Role.IT) {
+      throw new Error('Unauthorized: Only admins and IT can view VM policies');
+    }
+
+    try {
+      return this.databaseService.policyVM.findFirst({});
+    } catch (error) {
+      console.error('Error fetching VM policies:', error);
+      throw new Error('Failed to fetch VM policies');
+    }
+  }
+
+  getPolicyDB(user: BackendJwtPayload) {
+    if (user.role !== Role.Admin && user.role !== Role.IT) {
+      throw new Error('Unauthorized: Only admins and IT can view DB policies');
+    }
+
+    try {
+      return this.databaseService.policyDatabase.findFirst({});
+    } catch (error) {
+      console.error('Error fetching DB policies:', error);
+      throw new Error('Failed to fetch DB policies');
+    }
+  }
+
+  getPolicyST(user: BackendJwtPayload) {
+    if (user.role !== Role.Admin && user.role !== Role.IT) {
+      throw new Error('Unauthorized: Only admins and IT can view ST policies');
+    }
+
+    try {
+      return this.databaseService.policyStorage.findFirst({});
+    } catch (error) {
+      console.error('Error fetching ST policies:', error);
+      throw new Error('Failed to fetch ST policies');
+    }
+  }
 }

@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { CloudProvider } from '@prisma/client';
+import { IsEnum, IsNotEmpty, IsNumber } from 'class-validator';
 
 export class STPolicyDto {
   @IsNotEmpty()
@@ -9,4 +10,12 @@ export class STPolicyDto {
     description: 'The maximum storage (in GB) allocated for the database',
   })
   maxStorage: number;
+
+  @IsNotEmpty()
+  @IsEnum(CloudProvider)
+  @ApiProperty({
+    example: CloudProvider.AZURE,
+    description: 'The cloud provider for the virtual machine',
+  })
+  cloudProvider: CloudProvider;
 }
