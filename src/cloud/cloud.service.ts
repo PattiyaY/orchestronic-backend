@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { BackendJwtPayload } from '../lib/types';
 import { SecretDto } from './dto/secret.dto';
@@ -25,6 +25,21 @@ export class CloudService {
       data: {
         ...secretData,
         cloudProvider: secretData.cloudProvider === 'AZURE' ? 'AZURE' : 'AWS',
+        userId: user.id,
+      },
+    });
+  }
+
+  deleteSecret(user: BackendJwtPayload, secretId: string) {
+    if (user.role !== 'Admin' && user.role !== 'IT') {
+      throw new UnauthorizedException(
+        'User does not have permission to delete secrets',
+      );
+    }
+
+    return this.databaseService.cloudResourceSecret.delete({
+      where: {
+        id: secretId,
         userId: user.id,
       },
     });

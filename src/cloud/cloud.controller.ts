@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
   Post,
   Request,
   UnauthorizedException,
@@ -61,6 +63,27 @@ export class CloudController {
       }
 
       return this.cloudService.createSecret(decoded, secretData);
+    } catch (error) {
+      console.error('Cloud Controller: Error decoding token', error);
+      throw new UnauthorizedException('Invalid token - unable to process');
+    }
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Delete a secret by ID',
+  })
+  deleteSecret(@Request() req: RequestWithHeaders, @Param('id') id: string) {
+    const token = extractToken(req);
+
+    try {
+      const decoded = jwt.decode(token) as BackendJwtPayload;
+
+      if (!decoded) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+
+      return this.cloudService.deleteSecret(decoded, id);
     } catch (error) {
       console.error('Cloud Controller: Error decoding token', error);
       throw new UnauthorizedException('Invalid token - unable to process');
