@@ -30,6 +30,28 @@ export class CloudService {
     });
   }
 
+  updateSecret(
+    user: BackendJwtPayload,
+    secretId: string,
+    secretData: SecretDto,
+  ) {
+    if (user.role !== 'Admin' && user.role !== 'IT') {
+      throw new UnauthorizedException(
+        'User does not have permission to update secrets',
+      );
+    }
+    return this.databaseService.cloudResourceSecret.update({
+      where: {
+        id: secretId,
+        userId: user.id,
+      },
+      data: {
+        ...secretData,
+        cloudProvider: secretData.cloudProvider === 'AZURE' ? 'AZURE' : 'AWS',
+      },
+    });
+  }
+
   deleteSecret(user: BackendJwtPayload, secretId: string) {
     if (user.role !== 'Admin' && user.role !== 'IT') {
       throw new UnauthorizedException(
