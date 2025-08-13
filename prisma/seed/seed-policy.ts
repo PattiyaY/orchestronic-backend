@@ -7,6 +7,7 @@ async function main() {
   await prisma.policyDatabase.deleteMany({});
   await prisma.policyStorage.deleteMany({});
 
+  //Azure
   await prisma.policyVM.create({
     data: {
       name: 'Standard_B1ls',
@@ -25,6 +26,28 @@ async function main() {
     data: {
       maxStorage: 200,
       cloudProvider: 'AZURE',
+    },
+  });
+
+  //aws
+  await prisma.policyVM.create({
+    data: {
+      name: 'Standard_B1ls',
+      numberOfCores: 1,
+      memoryInMB: 512,
+      cloudProvider: 'AWS',
+    },
+  });
+  await prisma.policyDatabase.create({
+    data: {
+      maxStorage: 100,
+      cloudProvider: 'AWS',
+    },
+  });
+  await prisma.policyStorage.create({
+    data: {
+      maxStorage: 200,
+      cloudProvider: 'AWS',
     },
   });
 }

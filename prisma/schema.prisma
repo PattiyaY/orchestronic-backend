@@ -182,22 +182,22 @@ model AzureVMSize {
 
 model PolicyVM {
   id            String        @id @default(uuid())
-  name          String        @unique
+  name          String
   numberOfCores Int
   memoryInMB    Int
-  cloudProvider CloudProvider
+  cloudProvider CloudProvider @unique
 }
 
 model PolicyDatabase {
   id            String        @id @default(uuid())
   maxStorage    Int
-  cloudProvider CloudProvider
+  cloudProvider CloudProvider @unique
 }
 
 model PolicyStorage {
   id            String        @id @default(uuid())
   maxStorage    Int
-  cloudProvider CloudProvider
+  cloudProvider CloudProvider @unique
 }
 
 enum CloudProvider {

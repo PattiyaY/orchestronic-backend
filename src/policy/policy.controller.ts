@@ -6,8 +6,15 @@ import {
   Request,
   Body,
   Patch,
+  Param,
+  Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { PolicyService } from './policy.service';
 import { BackendJwtPayload, RequestWithHeaders } from '../lib/types';
 import { extractToken } from '../lib/extract-token';
@@ -15,6 +22,7 @@ import * as jwt from 'jsonwebtoken';
 import { VMPolicyDto } from './dto/vm-policy.dto';
 import { DBPolicyDto } from './dto/db-policy.dto';
 import { STPolicyDto } from './dto/st-policy.dto';
+import { CloudProvider } from '@prisma/client';
 
 @UseGuards()
 @ApiBearerAuth('access-token')
@@ -156,13 +164,16 @@ export class PolicyController {
     status: 200,
     description: 'VM policies retrieved successfully',
   })
-  getPolicyVM(@Request() req: RequestWithHeaders) {
+  getPolicyVM(
+    @Request() req: RequestWithHeaders,
+    @Query('cloudProvider') cloudProvider: CloudProvider,
+  ) {
     const token = extractToken(req);
 
     try {
       const decoded = jwt.decode(token) as BackendJwtPayload;
 
-      return this.policyService.getPolicyVM(decoded);
+      return this.policyService.getPolicyVM(decoded, cloudProvider);
     } catch (error) {
       console.error('Error decoding token:', error);
       throw new Error('Invalid token - unable to process');
@@ -178,13 +189,16 @@ export class PolicyController {
     status: 200,
     description: 'Database policies retrieved successfully',
   })
-  getPolicyDB(@Request() req: RequestWithHeaders) {
+  getPolicyDB(
+    @Request() req: RequestWithHeaders,
+    @Query('cloudProvider') cloudProvider: CloudProvider,
+  ) {
     const token = extractToken(req);
 
     try {
       const decoded = jwt.decode(token) as BackendJwtPayload;
 
-      return this.policyService.getPolicyDB(decoded);
+      return this.policyService.getPolicyDB(decoded, cloudProvider);
     } catch (error) {
       console.error('Error decoding token:', error);
       throw new Error('Invalid token - unable to process');
@@ -200,13 +214,16 @@ export class PolicyController {
     status: 200,
     description: 'Storage policies retrieved successfully',
   })
-  getPolicyST(@Request() req: RequestWithHeaders) {
+  getPolicyST(
+    @Request() req: RequestWithHeaders,
+    @Query('cloudProvider') cloudProvider: CloudProvider,
+  ) {
     const token = extractToken(req);
 
     try {
       const decoded = jwt.decode(token) as BackendJwtPayload;
 
-      return this.policyService.getPolicyST(decoded);
+      return this.policyService.getPolicyST(decoded, cloudProvider);
     } catch (error) {
       console.error('Error decoding token:', error);
       throw new Error('Invalid token - unable to process');
