@@ -33,21 +33,13 @@ export class SecretDto {
     description: 'The tenant ID for the cloud resource',
     example: '87654321-4321-4321-4321-210987654321',
   })
-  tenantId: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @ApiProperty({
-    description: 'The user ID associated with the secret',
-    example: 'user-123',
-  })
-  userId: string;
+  tenantId?: string;
 
   @IsString()
   @IsNotEmpty()
   @ApiProperty({
     description: 'The cloud provider for the secret',
-    example: 'Azure',
+    example: 'AZURE',
   })
   cloudProvider: CloudProvider;
 }

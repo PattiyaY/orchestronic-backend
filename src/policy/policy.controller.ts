@@ -1,12 +1,20 @@
 import {
   Controller,
   Post,
+  Get,
   UseGuards,
   Request,
   Body,
   Patch,
+  Param,
+  Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { PolicyService } from './policy.service';
 import { BackendJwtPayload, RequestWithHeaders } from '../lib/types';
 import { extractToken } from '../lib/extract-token';
@@ -14,6 +22,7 @@ import * as jwt from 'jsonwebtoken';
 import { VMPolicyDto } from './dto/vm-policy.dto';
 import { DBPolicyDto } from './dto/db-policy.dto';
 import { STPolicyDto } from './dto/st-policy.dto';
+import { CloudProvider } from '@prisma/client';
 
 @UseGuards()
 @ApiBearerAuth('access-token')
@@ -140,6 +149,81 @@ export class PolicyController {
       const decoded = jwt.decode(token) as BackendJwtPayload;
 
       return this.policyService.updatePolicyST(decoded, policyData);
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      throw new Error('Invalid token - unable to process');
+    }
+  }
+
+  @Get('virtual_machine')
+  @ApiOperation({
+    summary: 'Get all Virtual Machine Policies',
+    description: 'Retrieves all policies for virtual machines.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'VM policies retrieved successfully',
+  })
+  getPolicyVM(
+    @Request() req: RequestWithHeaders,
+    @Query('cloudProvider') cloudProvider: CloudProvider,
+  ) {
+    const token = extractToken(req);
+
+    try {
+      const decoded = jwt.decode(token) as BackendJwtPayload;
+
+      return this.policyService.getPolicyVM(decoded, cloudProvider);
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      throw new Error('Invalid token - unable to process');
+    }
+  }
+
+  @Get('database')
+  @ApiOperation({
+    summary: 'Get all Database Policies',
+    description: 'Retrieves all policies for databases.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Database policies retrieved successfully',
+  })
+  getPolicyDB(
+    @Request() req: RequestWithHeaders,
+    @Query('cloudProvider') cloudProvider: CloudProvider,
+  ) {
+    const token = extractToken(req);
+
+    try {
+      const decoded = jwt.decode(token) as BackendJwtPayload;
+
+      return this.policyService.getPolicyDB(decoded, cloudProvider);
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      throw new Error('Invalid token - unable to process');
+    }
+  }
+
+  @Get('storage')
+  @ApiOperation({
+    summary: 'Get all Storage Policies',
+    description: 'Retrieves all policies for storage resources.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Storage policies retrieved successfully',
+  })
+  getPolicyST(
+    @Request() req: RequestWithHeaders,
+    @Query('cloudProvider') cloudProvider: CloudProvider,
+  ) {
+    const token = extractToken(req);
+
+    try {
+      const decoded = jwt.decode(token) as BackendJwtPayload;
+
+      return this.policyService.getPolicyST(decoded, cloudProvider);
     } catch (error) {
       console.error('Error decoding token:', error);
       throw new Error('Invalid token - unable to process');
