@@ -295,10 +295,10 @@ export class RequestService {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const coresFilter: any = {};
         if (minCores !== undefined) {
-          coresFilter.gte = minCores;
+          coresFilter.gte = Number(minCores);
         }
         if (maxCores !== undefined) {
-          coresFilter.lte = maxCores;
+          coresFilter.lte = Number(maxCores);
         }
         where.numberOfCores = coresFilter;
       }
@@ -307,10 +307,10 @@ export class RequestService {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const memoryFilter: any = {};
         if (minMemory !== undefined) {
-          memoryFilter.gte = minMemory;
+          memoryFilter.gte = Number(minMemory);
         }
         if (maxMemory !== undefined) {
-          memoryFilter.lte = maxMemory;
+          memoryFilter.lte = Number(maxMemory);
         }
         where.memoryInMB = memoryFilter;
       }

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UnauthorizedException,
   UseGuards,
@@ -18,6 +19,8 @@ import * as jwt from 'jsonwebtoken';
 import { BackendJwtPayload } from '../lib/types';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { Q } from '@faker-js/faker/dist/airline-BUL6NtOJ';
+import { CloudProvider } from '@prisma/client';
 
 @UseGuards(AuthGuard('jwt'))
 @ApiBearerAuth('access-token')
@@ -29,7 +32,10 @@ export class CloudController {
   @ApiOperation({
     summary: 'Get cloud data',
   })
-  getCloudData(@Request() req: RequestWithHeaders) {
+  getCloudData(
+    @Request() req: RequestWithHeaders,
+    @Query('cloudProvider') cloudProvider: CloudProvider,
+  ) {
     const token = extractToken(req);
 
     try {
@@ -39,7 +45,7 @@ export class CloudController {
         throw new UnauthorizedException('User not authenticated');
       }
 
-      return this.cloudService.getSecretById(decoded);
+      return this.cloudService.getSecretById(decoded, cloudProvider);
     } catch (error) {
       console.error('Cloud Controller: Error decoding token', error);
       throw new UnauthorizedException('Invalid token - unable to process');

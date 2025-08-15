@@ -2,22 +2,26 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { BackendJwtPayload } from '../lib/types';
 import { SecretDto } from './dto/secret.dto';
+import { CloudProvider } from '@prisma/client';
 
 @Injectable()
 export class CloudService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  getSecretById(user: BackendJwtPayload) {
-    return this.databaseService.cloudResourceSecret.findMany({
-      where: { userId: user.id },
+  async getSecretById(user: BackendJwtPayload, cloudProvider: CloudProvider) {
+    const result = await this.databaseService.cloudResourceSecret.findFirst({
+      where: { userId: user.id, cloudProvider },
       select: {
         clientId: true,
         clientSecret: true,
         subscriptionId: true,
         tenantId: true,
         cloudProvider: true,
+        userId: true,
       },
     });
+
+    return result ?? [];
   }
 
   createSecret(user: BackendJwtPayload, secretData: SecretDto) {
