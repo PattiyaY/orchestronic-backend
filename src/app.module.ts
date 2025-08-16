@@ -26,6 +26,7 @@ import { PolicyService } from './policy/policy.service';
 import { PolicyController } from './policy/policy.controller';
 import { PolicyModule } from './policy/policy.module';
 import { HttpModule } from '@nestjs/axios';
+import { GitlabModule } from './gitlab/gitlab.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { HttpModule } from '@nestjs/axios';
     AirflowModule,
     CloudModule,
     PolicyModule,
+    GitlabModule,
   ],
   controllers: [
     AppController,
