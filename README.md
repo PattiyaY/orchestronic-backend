@@ -1,1 +1,1 @@
-Deloy
+Deploy
