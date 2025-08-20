@@ -20,13 +20,13 @@ model Request {
   status      Status  @default(Pending)
   description String
   feedback    String?
-  owner       User    @relation(fields: [ownerId], references: [id])
+  owner       User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   ownerId     String
 
-  repository   Repository @relation(fields: [repositoryId], references: [id])
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
   repositoryId String     @unique
 
-  resources   Resources @relation(fields: [resourcesId], references: [id])
+  resources   Resources @relation(fields: [resourcesId], references: [id], onDelete: Cascade)
   resourcesId String    @unique
 
   createdAt DateTime @default(now())
@@ -40,7 +40,7 @@ model Repository {
 
   request Request?
 
-  resources   Resources @relation(fields: [resourcesId], references: [id])
+  resources   Resources @relation(fields: [resourcesId], references: [id], onDelete: Cascade)
   resourcesId String    @unique
 
   collaborators User[]           @relation("RepositoryCollaborators")
@@ -59,7 +59,7 @@ model Resources {
 
   repository Repository?
 
-  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id])
+  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
   resourceConfigId String         @unique
 
   request Request?
@@ -80,10 +80,10 @@ model VMInstance {
 
   name   String
   os     String
-  size   AzureVMSize @relation(fields: [sizeId], references: [id])
+  size   AzureVMSize @relation(fields: [sizeId], references: [id], onDelete: Cascade)
   sizeId String
 
-  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id])
+  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
   resourceConfigId String
 }
 
@@ -93,7 +93,7 @@ model DatabaseInstance {
   engine    String
   storageGB Int
 
-  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id])
+  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
   resourceConfigId String
 }
 
@@ -103,7 +103,7 @@ model StorageInstance {
   type       String
   capacityGB Int
 
-  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id])
+  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
   resourceConfigId String
 }
 
@@ -129,8 +129,8 @@ enum RepositoryStatus {
 model ownedRepository {
   userId       String
   repositoryId String
-  user         User       @relation(fields: [userId], references: [id])
-  repository   Repository @relation(fields: [repositoryId], references: [id])
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
 
   @@id([userId, repositoryId])
 }
@@ -139,8 +139,8 @@ model RepositoryCollaborator {
   userId       String
   repositoryId String
 
-  user       User       @relation(fields: [userId], references: [id])
-  repository Repository @relation(fields: [repositoryId], references: [id])
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
 
   assignedAt DateTime @default(now()) // optional: track metadata
 
@@ -164,7 +164,7 @@ model CloudResourceSecret {
   clientSecret   String
   subscriptionId String        @unique
   tenantId       String?
-  User           User          @relation(fields: [userId], references: [id])
+  User           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId         String
   cloudProvider  CloudProvider
 }

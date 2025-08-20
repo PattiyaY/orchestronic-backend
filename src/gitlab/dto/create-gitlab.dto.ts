@@ -10,6 +10,13 @@ export class CreateGitlabDto {
   name: string;
 
   @ApiProperty({
+    example: 'A sample NestJS project',
+    description: 'The description of the GitLab project',
+  })
+  @IsString()
+  description: string;
+
+  @ApiProperty({
     example: 'private',
     description: 'Visibility level of the project',
     enum: ['private', 'internal', 'public'],

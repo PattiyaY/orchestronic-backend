@@ -16,7 +16,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RequestService } from './request.service';
-import { Prisma, Role, Status } from '@prisma/client';
+import { Prisma, RepositoryStatus, Role, Status } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -27,19 +27,28 @@ import {
 import { CreateRequestDto } from './dto/create-request.dto';
 import { AuthGuard } from '@nestjs/passport';
 import * as jwt from 'jsonwebtoken';
-import { UpdateRequestStatusDto } from './dto/request-status.dto';
+import {
+  RequestStatus,
+  UpdateRequestStatusDto,
+} from './dto/request-status.dto';
 import { BackendJwtPayload } from '../lib/types';
 import { RequestWithHeaders } from '../lib/types';
 import { extractToken } from '../lib/extract-token';
 import { GetVmSizesDto } from './dto/get-vm-sizes.dto';
 import { PaginatedVmSizesDto } from './dto/paginated-vm-sizes.dto';
 import { UpdateFeedbackDto } from './dto/update-feedback.dto';
+import { GitlabService } from '../gitlab/gitlab.service';
+import { RepositoriesService } from '../repositories/repositories.service';
 
 @ApiBearerAuth('access-token')
 @UseGuards(AuthGuard('jwt'))
 @Controller('request')
 export class RequestController {
-  constructor(private readonly requestService: RequestService) {}
+  constructor(
+    private readonly requestService: RequestService,
+    private readonly gitlabService: GitlabService,
+    private readonly repositoryService: RepositoriesService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -184,6 +193,18 @@ export class RequestController {
       throw new NotFoundException(`Request with id ${id} not found`);
     }
 
+    if (status === RequestStatus.Approved) {
+      await this.gitlabService.createProject({
+        name: updated.repository.name,
+        description: updated.repository.description || '',
+        visibility: 'public',
+      });
+      await this.repositoryService.updateRepository(
+        updated.repository.id,
+        RepositoryStatus.Created,
+      );
+    }
+
     return updated;
   }
 
@@ -223,6 +244,6 @@ export class RequestController {
     summary: 'Delete a request by ID',
   })
   removeRequest(@Param('id') id: string) {
-    return this.requestService.removeRequest(+id);
+    return this.requestService.removeRequest(id);
   }
 }

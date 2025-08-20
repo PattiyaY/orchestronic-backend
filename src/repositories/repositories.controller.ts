@@ -1,4 +1,4 @@
-import { Controller, UseGuards } from '@nestjs/common';
+import { Controller, Param, UseGuards } from '@nestjs/common';
 import { Get, Query, Post, Body, Request } from '@nestjs/common';
 import { RepositoriesService } from './repositories.service';
 import { CreateRepositoriesDto } from './dto/create-repository.dto';
@@ -7,6 +7,7 @@ import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { BackendJwtPayload, RequestWithHeaders } from '../lib/types';
 import * as jwt from 'jsonwebtoken';
 import { extractToken } from '../lib/extract-token';
+import { RepositoryStatus } from '@prisma/client';
 
 @Controller('repositories')
 export class RepositoriesController {
@@ -50,5 +51,12 @@ export class RepositoriesController {
       console.error('Request Controller: Error decoding token');
       throw new Error('Invalid token - unable to process');
     }
+  }
+
+  updateRepositoryStatus(
+    @Param('id') id: string,
+    @Body() status: RepositoryStatus,
+  ) {
+    return this.repositoriesService.updateRepository(id, status);
   }
 }

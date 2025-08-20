@@ -83,10 +83,6 @@ export class PolicyService {
   }
 
   getPolicyVM(user: BackendJwtPayload, cloudProvider: CloudProvider) {
-    if (user.role !== Role.Admin && user.role !== Role.IT) {
-      throw new Error('Unauthorized: Only admins and IT can view VM policies');
-    }
-
     try {
       return this.databaseService.policyVM.findUnique({
         where: { cloudProvider },
@@ -98,10 +94,6 @@ export class PolicyService {
   }
 
   getPolicyDB(user: BackendJwtPayload, cloudProvider: CloudProvider) {
-    if (user.role !== Role.Admin && user.role !== Role.IT) {
-      throw new Error('Unauthorized: Only admins and IT can view DB policies');
-    }
-
     try {
       return this.databaseService.policyDatabase.findUnique({
         where: { cloudProvider },
@@ -113,10 +105,6 @@ export class PolicyService {
   }
 
   getPolicyST(user: BackendJwtPayload, cloudProvider: CloudProvider) {
-    if (user.role !== Role.Admin && user.role !== Role.IT) {
-      throw new Error('Unauthorized: Only admins and IT can view ST policies');
-    }
-
     try {
       return this.databaseService.policyStorage.findUnique({
         where: { cloudProvider },

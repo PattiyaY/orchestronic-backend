@@ -2,16 +2,27 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateRepositoriesDto } from './dto/create-repository.dto';
 import { BackendJwtPayload } from '../lib/types';
+import { RepositoryStatus, Role } from '@prisma/client';
 
 @Injectable()
 export class RepositoriesService {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  async updateRepository(id: string, status: RepositoryStatus) {
+    return this.databaseService.repository.update({
+      where: { id },
+      data: { status },
+    });
+  }
+
   async findAll(user: BackendJwtPayload) {
+    const whereClause =
+      user.role === Role.Admin || user.role === Role.IT
+        ? {}
+        : { ownerId: user.id };
+
     const repoIds = await this.databaseService.request.findMany({
-      where: {
-        ownerId: user.id,
-      },
+      where: whereClause,
       select: {
         repositoryId: true,
       },
