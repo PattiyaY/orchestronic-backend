@@ -7,13 +7,13 @@ import { ApiOperation } from '@nestjs/swagger';
 export class RabbitmqController {
   constructor(private readonly queueService: RabbitmqService) {}
 
-  @Get()
-  @ApiOperation({
-    summary: 'Get the current request from the queue',
-  })
-  getQueueRequest() {
-    return this.queueService.getRequest();
-  }
+  // @Get()
+  // @ApiOperation({
+  //   summary: 'Get the current request from the queue',
+  // })
+  // getQueueRequest() {
+  //   return this.queueService.getRequest();
+  // }
 
   @Post('queue')
   @ApiOperation({
