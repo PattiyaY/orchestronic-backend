@@ -34,16 +34,18 @@ export class AirflowService {
         `${process.env.AIRFLOW_BASE_URL ?? 'http://localhost:8080'}${path}`,
         payload,
         {
-          headers: {
-            Authorization: authHeader,
-            'Content-Type': 'application/json',
+          auth: {
+            username: process.env.AIRFLOW_USERNAME ?? 'admin',
+            password: process.env.AIRFLOW_PASSWORD ?? 'admin',
           },
+          headers: { 'Content-Type': 'application/json' },
         },
       );
 
       const resp = await firstValueFrom(response$);
       return resp.data;
     } catch (err: any) {
+      console.log(err);
       throw new HttpException(
         {
           message: 'Failed to trigger Airflow DAG',
