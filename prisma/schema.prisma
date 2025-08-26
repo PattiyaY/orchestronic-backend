@@ -89,9 +89,12 @@ model VMInstance {
 
 model DatabaseInstance {
   id String @id @default(uuid())
-
-  engine    String
-  storageGB Int
+  name       String @default("database-instance")
+  username   String @default("admin")
+  password   String @default("P@ssw0rd!")
+  engine    Engine @default(PostgreSQL)
+  storageGB Int @default(2048)
+  skuName   String @default("B_Standard_B1ms")
 
   resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
   resourceConfigId String
@@ -215,4 +218,9 @@ enum Role {
   Developer
   Admin
   IT
+}
+
+enum Engine {
+  MySQL
+  PostgreSQL
 }

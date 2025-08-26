@@ -39,6 +39,7 @@ import { PaginatedVmSizesDto } from './dto/paginated-vm-sizes.dto';
 import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 import { GitlabService } from '../gitlab/gitlab.service';
 import { RepositoriesService } from '../repositories/repositories.service';
+import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 
 @ApiBearerAuth('access-token')
 @UseGuards(AuthGuard('jwt'))
@@ -48,6 +49,7 @@ export class RequestController {
     private readonly requestService: RequestService,
     private readonly gitlabService: GitlabService,
     private readonly repositoryService: RepositoriesService,
+    private readonly rabbitmqService: RabbitmqService,
   ) {}
 
   @Get()
@@ -203,6 +205,8 @@ export class RequestController {
         updated.repository.id,
         RepositoryStatus.Created,
       );
+
+      await this.rabbitmqService.queueRequest(id.toString());
     }
 
     return updated;

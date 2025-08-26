@@ -35,8 +35,8 @@ export class AirflowService {
         payload,
         {
           auth: {
-            username: process.env.AIRFLOW_USERNAME ?? 'admin',
-            password: process.env.AIRFLOW_PASSWORD ?? 'admin',
+            username: process.env.AIRFLOW_USERNAME ?? 'airflow',
+            password: process.env.AIRFLOW_PASSWORD ?? 'airflow',
           },
           headers: { 'Content-Type': 'application/json' },
         },
