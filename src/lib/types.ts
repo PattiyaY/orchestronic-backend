@@ -30,3 +30,7 @@ export interface CustomJWTPayload {
   tid?: string;
   appid?: string;
 }
+
+export interface RequestWithCookies extends Request {
+  cookies: Record<string, string>;
+}

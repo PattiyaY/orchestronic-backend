@@ -6,6 +6,7 @@ import { GitlabService } from 'src/gitlab/gitlab.service';
 import { RepositoriesService } from 'src/repositories/repositories.service';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { PassportModule } from '@nestjs/passport';
 
 @Module({
   imports: [
@@ -20,6 +21,9 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
         },
       },
     ]),
+    PassportModule.register({
+      defaultStrategy: 'AzureAD',
+    }),
   ],
   controllers: [RequestController],
   providers: [

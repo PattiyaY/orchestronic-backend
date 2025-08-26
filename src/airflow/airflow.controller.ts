@@ -2,19 +2,17 @@ import {
   Body,
   Controller,
   Post,
-  UseGuards,
   Request,
   UnauthorizedException,
   Param,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AirflowService } from './airflow.service';
-import { BackendJwtPayload, RequestWithHeaders } from '../lib/types';
-import { extractToken } from '../lib/extract-token';
+import { BackendJwtPayload } from '../lib/types';
+import { RequestWithCookies } from '../lib/types';
 import * as jwt from 'jsonwebtoken';
 import { DagDto } from './dto/dag.dto';
 
-@UseGuards()
 @ApiBearerAuth('access-token')
 @Controller('airflow')
 export class AirflowController {
@@ -27,16 +25,24 @@ export class AirflowController {
       'Triggers a specified Airflow DAG with the provided configuration.',
   })
   triggerDag(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Param('dagId') dagId: string,
     @Body() body: DagDto,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      return this.airflowService.triggerDag(decoded, dagId, body);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.airflowService.triggerDag(payload, dagId, body);
     } catch (error) {
       throw new UnauthorizedException('Invalid token - unable to process');
     }

@@ -6,7 +6,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { BackendJwtPayload, RequestWithHeaders } from '../lib/types';
 import * as jwt from 'jsonwebtoken';
-import { extractToken } from '../lib/extract-token';
+import { RequestWithCookies } from '../lib/types';
+import { UnauthorizedException } from '@nestjs/common';
 import { RepositoryStatus } from '@prisma/client';
 
 @Controller('repositories')
@@ -22,7 +23,6 @@ export class RepositoriesController {
   }
 
   @ApiBearerAuth('access-token')
-  @UseGuards(AuthGuard('jwt'))
   @Post()
   @ApiOperation({
     summary: 'Create a new repository',
@@ -32,24 +32,29 @@ export class RepositoriesController {
   }
 
   @ApiBearerAuth('access-token')
-  @UseGuards(AuthGuard('jwt'))
   @Get()
   @ApiOperation({
     summary: 'Find all repositories for the authenticated user',
   })
   findAll(@Request() req: RequestWithHeaders) {
-    const token = extractToken(req);
+    const token = (req as RequestWithCookies).cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      // console.log('Request Controller: Decoding token...');
-      // Decode the token without verification to get payload
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-      // console.log('Request Controller: Token decoded successfully:', decoded);
-
-      return this.repositoriesService.findAll(decoded);
-    } catch {
-      console.error('Request Controller: Error decoding token');
-      throw new Error('Invalid token - unable to process');
+      // decode as unknown first, then assert
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.repositoriesService.findAll(payload);
+    } catch (err) {
+      console.error('Repositories Controller: Error decoding token', err);
+      throw new UnauthorizedException('Invalid token');
     }
   }
 

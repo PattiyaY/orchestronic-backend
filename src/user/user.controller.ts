@@ -7,7 +7,6 @@ import {
   Request,
   NotFoundException,
   ConflictException,
-  UseGuards,
   ForbiddenException,
   UnauthorizedException,
   Patch,
@@ -20,14 +19,10 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { User } from '@prisma/client';
-import { BackendJwtPayload, RequestWithHeaders } from '../lib/types';
-import { extractToken } from '../lib/extract-token';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { BackendJwtPayload } from '../lib/types';
+import { RequestWithCookies } from '../lib/types';
 import { UpdateRoleDto } from '../request/dto/update-role.dto';
-import { AuthGuard } from '@nestjs/passport';
 
-// @ApiBearerAuth('access-token')
-// @UseGuards(AuthGuard('jwt'))
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -47,19 +42,27 @@ export class UserController {
   }
 
   @ApiBearerAuth('access-token')
-  @UseGuards(AuthGuard('jwt'))
   @Patch('/role')
   @ApiOperation({
     summary: 'Update user role by user ID',
   })
   updateRole(
     @Body() roleUpdate: UpdateRoleDto,
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const user = jwt.decode(token) as BackendJwtPayload;
+      const decoded = jwt.verify(token, secret) as unknown;
+      const user = decoded as BackendJwtPayload;
 
       if (!user) {
         throw new UnauthorizedException('User not authenticated');
@@ -131,21 +134,29 @@ export class UserController {
   }
 
   @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
   @Get('me')
   @ApiOperation({
     summary: 'Get all requests for the authenticated user',
   })
-  findRequestsForUser(@Request() req: RequestWithHeaders) {
-    const token = extractToken(req);
+  findRequestsForUser(@Request() req: RequestWithCookies) {
+    const token = req.cookies?.['access_token'];
+
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      return this.userService.findByEmail(decoded.email ?? '');
-    } catch {
-      console.error('Request Controller: Error decoding token');
-      throw new Error('Invalid token - unable to process');
+      const decoded = jwt.verify(token, secret) as unknown;
+      const user = decoded as BackendJwtPayload;
+      return this.userService.findByEmail(user.email ?? '');
+    } catch (err) {
+      console.error('User Controller: Error decoding token', err);
+      throw new UnauthorizedException('Invalid token');
     }
   }
 }

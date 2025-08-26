@@ -2,7 +2,6 @@ import {
   Controller,
   Post,
   Get,
-  UseGuards,
   Request,
   Body,
   Patch,
@@ -16,15 +15,15 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { PolicyService } from './policy.service';
-import { BackendJwtPayload, RequestWithHeaders } from '../lib/types';
-import { extractToken } from '../lib/extract-token';
+import { BackendJwtPayload } from '../lib/types';
+import { RequestWithCookies } from '../lib/types';
+import { UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { VMPolicyDto } from './dto/vm-policy.dto';
 import { DBPolicyDto } from './dto/db-policy.dto';
 import { STPolicyDto } from './dto/st-policy.dto';
 import { CloudProvider } from '@prisma/client';
 
-@UseGuards()
 @ApiBearerAuth('access-token')
 @Controller('policy')
 export class PolicyController {
@@ -36,18 +35,26 @@ export class PolicyController {
     description: 'Creates a new policy for managing virtual machines.',
   })
   createPolicy(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Body() policyData: VMPolicyDto,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      return this.policyService.createPolicyVM(decoded, policyData);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.policyService.createPolicyVM(payload, policyData);
     } catch (error) {
       console.error('Error decoding token:', error);
-      throw new Error('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -57,18 +64,26 @@ export class PolicyController {
     description: 'Creates a new policy for managing databases.',
   })
   createPolicyDB(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Body() policyData: DBPolicyDto,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      return this.policyService.createPolicyDB(decoded, policyData);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.policyService.createPolicyDB(payload, policyData);
     } catch (error) {
       console.error('Error decoding token:', error);
-      throw new Error('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -78,17 +93,26 @@ export class PolicyController {
     description: 'Creates a new policy for managing storage resources.',
   })
   createPolicyST(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Body() policyData: STPolicyDto,
   ) {
-    const token = extractToken(req);
-    try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
 
-      return this.policyService.createPolicyST(decoded, policyData);
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
+
+    try {
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.policyService.createPolicyST(payload, policyData);
     } catch (error) {
       console.error('Error decoding token:', error);
-      throw new Error('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -98,18 +122,26 @@ export class PolicyController {
     description: 'Updates an existing policy for managing virtual machines.',
   })
   updatePolicy(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Body() policyData: VMPolicyDto,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      return this.policyService.updatePolicyVM(decoded, policyData);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.policyService.updatePolicyVM(payload, policyData);
     } catch (error) {
       console.error('Error decoding token:', error);
-      throw new Error('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -119,18 +151,26 @@ export class PolicyController {
     description: 'Updates an existing policy for managing databases.',
   })
   updatePolicyDB(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Body() policyData: DBPolicyDto,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      return this.policyService.updatePolicyDB(decoded, policyData);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.policyService.updatePolicyDB(payload, policyData);
     } catch (error) {
       console.error('Error decoding token:', error);
-      throw new Error('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -140,18 +180,26 @@ export class PolicyController {
     description: 'Updates an existing policy for managing storage resources.',
   })
   updatePolicyST(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Body() policyData: STPolicyDto,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      return this.policyService.updatePolicyST(decoded, policyData);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.policyService.updatePolicyST(payload, policyData);
     } catch (error) {
       console.error('Error decoding token:', error);
-      throw new Error('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -165,18 +213,26 @@ export class PolicyController {
     description: 'VM policies retrieved successfully',
   })
   getPolicyVM(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Query('cloudProvider') cloudProvider: CloudProvider,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      return this.policyService.getPolicyVM(decoded, cloudProvider);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.policyService.getPolicyVM(payload, cloudProvider);
     } catch (error) {
       console.error('Error decoding token:', error);
-      throw new Error('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -190,18 +246,26 @@ export class PolicyController {
     description: 'Database policies retrieved successfully',
   })
   getPolicyDB(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Query('cloudProvider') cloudProvider: CloudProvider,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      return this.policyService.getPolicyDB(decoded, cloudProvider);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.policyService.getPolicyDB(payload, cloudProvider);
     } catch (error) {
       console.error('Error decoding token:', error);
-      throw new Error('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -215,18 +279,26 @@ export class PolicyController {
     description: 'Storage policies retrieved successfully',
   })
   getPolicyST(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Query('cloudProvider') cloudProvider: CloudProvider,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      return this.policyService.getPolicyST(decoded, cloudProvider);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.policyService.getPolicyST(payload, cloudProvider);
     } catch (error) {
       console.error('Error decoding token:', error);
-      throw new Error('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 }

@@ -3,16 +3,26 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 // import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { ValidationPipe } from '@nestjs/common';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+// import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import * as cookieParser from 'cookie-parser';
+import * as session from 'express-session';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(cookieParser()); // 👈 add this
+
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || 'supersecret',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: false }, // true if HTTPS
+    }),
+  );
 
   app.enableCors({
-    origin: '*',
-    methods: '*',
-    credentials: true,
-    allowedHeaders: '*',
+    origin: process.env.FRONTEND_URL,
+    credentials: true, // allow cookies
   });
 
   app.useGlobalPipes(new ValidationPipe());
@@ -48,19 +58,15 @@ async function bootstrap() {
     ],
   });
 
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.RMQ,
-    options: {
-      urls: ['amqp://localhost:5672'],
-      queue: 'request',
-    },
-  });
+  // app.connectMicroservice<MicroserviceOptions>({
+  //   transport: Transport.RMQ,
+  //   options: {
+  //     urls: ['amqp://localhost:5672'],
+  //     queue: 'request',
+  //   },
+  // });
 
   // await app.startAllMicroservices();
-  if (process.env.PROD === 'true') {
-    await app.listen(80, '0.0.0.0');
-  } else {
-    await app.listen(process.env.PORT ?? 3000);
-  }
+  await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap();

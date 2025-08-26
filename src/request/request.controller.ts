@@ -13,7 +13,6 @@ import {
   Req,
   Request,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common';
 import { RequestService } from './request.service';
 import { Prisma, RepositoryStatus, Role, Status } from '@prisma/client';
@@ -25,15 +24,12 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { CreateRequestDto } from './dto/create-request.dto';
-import { AuthGuard } from '@nestjs/passport';
 import * as jwt from 'jsonwebtoken';
 import {
   RequestStatus,
   UpdateRequestStatusDto,
 } from './dto/request-status.dto';
-import { BackendJwtPayload } from '../lib/types';
-import { RequestWithHeaders } from '../lib/types';
-import { extractToken } from '../lib/extract-token';
+import { BackendJwtPayload, RequestWithCookies } from '../lib/types';
 import { GetVmSizesDto } from './dto/get-vm-sizes.dto';
 import { PaginatedVmSizesDto } from './dto/paginated-vm-sizes.dto';
 import { UpdateFeedbackDto } from './dto/update-feedback.dto';
@@ -42,7 +38,6 @@ import { RepositoriesService } from '../repositories/repositories.service';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 
 @ApiBearerAuth('access-token')
-@UseGuards(AuthGuard('jwt'))
 @Controller('request')
 export class RequestController {
   constructor(
@@ -53,18 +48,26 @@ export class RequestController {
   ) {}
 
   @Get()
-  @ApiOperation({
-    summary: 'Find all requests for the authenticated user',
-  })
-  findAll(@Request() req: RequestWithHeaders) {
-    const token = extractToken(req);
+  findAll(@Req() req: RequestWithCookies) {
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-      return this.requestService.findAll(decoded);
-    } catch {
-      console.error('Request Controller: Error decoding token');
-      throw new Error('Invalid token - unable to process');
+      // decode as unknown first, then assert
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+
+      return this.requestService.findAll(payload);
+    } catch (err) {
+      console.error('Request Controller: Error decoding token', err);
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -106,9 +109,17 @@ export class RequestController {
   })
   async findWithRequestDisplayCode(
     @Query('displayCode') displayCode: string,
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     if (!/^R-\d+$/.test(displayCode)) {
       throw new BadRequestException(
@@ -117,10 +128,11 @@ export class RequestController {
     }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
       return this.requestService.findWithRequestDisplayCode(
         displayCode,
-        decoded,
+        payload,
       );
     } catch {
       console.error('Request Controller: Error decoding token');
@@ -142,13 +154,23 @@ export class RequestController {
   })
   @ApiBody({ type: CreateRequestDto })
   async createRequest(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Body() request: CreateRequestDto,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
+
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-      return this.requestService.createRequest(request, decoded);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.requestService.createRequest(request, payload);
     } catch {
       console.error('Request Controller: Error decoding token');
       throw new Error('Invalid token - unable to process');
@@ -173,16 +195,22 @@ export class RequestController {
   async updateRequestStatus(
     @Param('id') id: string,
     @Body() { status }: UpdateRequestStatusDto,
-    @Req() req: RequestWithHeaders,
+    @Req() req: RequestWithCookies,
   ) {
-    const token = extractToken(req);
-    const user = jwt.decode(token) as BackendJwtPayload;
-
-    if (!user) {
-      throw new UnauthorizedException('User not authenticated');
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
     }
 
-    if (user.role !== 'Admin' && user.role !== 'IT') {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
+
+    const decoded = jwt.verify(token, secret) as unknown;
+    const payload = decoded as BackendJwtPayload;
+
+    if (payload.role !== 'Admin' && payload.role !== 'IT') {
       throw new ForbiddenException(
         'You do not have permission to update status',
       );
@@ -219,18 +247,27 @@ export class RequestController {
   updateRequestFeedback(
     @Param('id') id: string,
     @Body() feedback: UpdateFeedbackDto,
-    @Req() req: RequestWithHeaders,
+    @Req() req: RequestWithCookies,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
 
-      if (!decoded) {
+      if (!payload) {
         throw new UnauthorizedException('User not authenticated');
       }
 
-      if (decoded.role !== 'Admin' && decoded.role !== 'IT') {
+      if (payload.role !== 'Admin' && payload.role !== 'IT') {
         throw new ForbiddenException(
           'You do not have permission to update feedback',
         );

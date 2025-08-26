@@ -9,20 +9,16 @@ import {
   Query,
   Request,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common';
 import { CloudService } from './cloud.service';
 import { SecretDto } from './dto/secret.dto';
 import { RequestWithHeaders } from '../lib/types';
-import { extractToken } from '../lib/extract-token';
+import { RequestWithCookies } from '../lib/types';
 import * as jwt from 'jsonwebtoken';
 import { BackendJwtPayload } from '../lib/types';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
-import { Q } from '@faker-js/faker/dist/airline-BUL6NtOJ';
 import { CloudProvider } from '@prisma/client';
 
-@UseGuards(AuthGuard('jwt'))
 @ApiBearerAuth('access-token')
 @Controller('cloud')
 export class CloudController {
@@ -33,22 +29,26 @@ export class CloudController {
     summary: 'Get cloud data',
   })
   getCloudData(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Query('cloudProvider') cloudProvider: CloudProvider,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      if (!decoded) {
-        throw new UnauthorizedException('User not authenticated');
-      }
-
-      return this.cloudService.getSecretById(decoded, cloudProvider);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.cloudService.getSecretById(payload, cloudProvider);
     } catch (error) {
       console.error('Cloud Controller: Error decoding token', error);
-      throw new UnauthorizedException('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -58,21 +58,25 @@ export class CloudController {
   })
   createSecret(
     @Body() secretData: SecretDto,
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      if (!decoded) {
-        throw new UnauthorizedException('User not authenticated');
-      }
-
-      return this.cloudService.createSecret(decoded, secretData);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.cloudService.createSecret(payload, secretData);
     } catch (error) {
       console.error('Cloud Controller: Error decoding token', error);
-      throw new UnauthorizedException('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -81,22 +85,27 @@ export class CloudController {
     summary: 'Update a secret by ID',
   })
   updateSecret(
-    @Request() req: RequestWithHeaders,
+    @Request() req: RequestWithCookies,
     @Param('id') id: string,
     @Body() secretData: SecretDto,
   ) {
-    const token = extractToken(req);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
+
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      if (!decoded) {
-        throw new UnauthorizedException('User not authenticated');
-      }
-
-      return this.cloudService.updateSecret(decoded, id, secretData);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.cloudService.updateSecret(payload, id, secretData);
     } catch (error) {
       console.error('Cloud Controller: Error decoding token', error);
-      throw new UnauthorizedException('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 
@@ -104,20 +113,24 @@ export class CloudController {
   @ApiOperation({
     summary: 'Delete a secret by ID',
   })
-  deleteSecret(@Request() req: RequestWithHeaders, @Param('id') id: string) {
-    const token = extractToken(req);
+  deleteSecret(@Request() req: RequestWithCookies, @Param('id') id: string) {
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
 
     try {
-      const decoded = jwt.decode(token) as BackendJwtPayload;
-
-      if (!decoded) {
-        throw new UnauthorizedException('User not authenticated');
-      }
-
-      return this.cloudService.deleteSecret(decoded, id);
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.cloudService.deleteSecret(payload, id);
     } catch (error) {
       console.error('Cloud Controller: Error decoding token', error);
-      throw new UnauthorizedException('Invalid token - unable to process');
+      throw new UnauthorizedException('Invalid token');
     }
   }
 }
