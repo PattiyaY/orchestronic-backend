@@ -11,6 +11,7 @@ export class AuthController {
 
   @Get('test-login')
   testLogin(@Res() res: Response) {
+    const isProd = process.env.NODE_ENV === 'production';
     const accessToken = this.jwt.sign(
       { sub: '123', role: 'Admin' },
       { expiresIn: '1h' },
@@ -19,15 +20,15 @@ export class AuthController {
 
     res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: false, // for Postman / localhost
-      sameSite: 'lax',
+      secure: isProd, // for Postman / localhost
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 60 * 60 * 1000,
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -43,6 +44,7 @@ export class AuthController {
   @Get('azure/callback')
   @UseGuards(AuthGuard('azure-ad'))
   azureCallback(@Req() req, @Res() res: Response) {
+    const isProd = process.env.NODE_ENV === 'production';
     console.log('Req.user:', req.user);
     const user = req.user;
 
@@ -56,15 +58,15 @@ export class AuthController {
     // Save tokens in HTTP-only cookies
     res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 60 * 60 * 1000, // 1 hour
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -74,6 +76,8 @@ export class AuthController {
 
   @Post('refresh')
   refresh(@Req() req: RequestWithCookies, @Res() res: Response) {
+    const isProd = process.env.NODE_ENV === 'production';
+
     const refreshToken = req.cookies['refresh_token'];
 
     if (!refreshToken) {
@@ -97,8 +101,8 @@ export class AuthController {
 
       res.cookie('access_token', accessToken, {
         httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
         maxAge: 60 * 60 * 1000, // 1 hour
       });
 
@@ -110,15 +114,17 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
+    const isProd = process.env.NODE_ENV === 'production';
+
     res.clearCookie('refresh_token', {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
     });
     res.clearCookie('access_token', {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
     });
     return { message: 'Logged out' };
   }
