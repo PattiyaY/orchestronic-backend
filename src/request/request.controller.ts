@@ -37,7 +37,7 @@ import { GitlabService } from '../gitlab/gitlab.service';
 import { RepositoriesService } from '../repositories/repositories.service';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 
-@ApiBearerAuth('access-token')
+// @ApiBearerAuth('access-token')
 @Controller('request')
 export class RequestController {
   constructor(

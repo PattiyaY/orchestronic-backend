@@ -102,9 +102,10 @@ model DatabaseInstance {
 
 model StorageInstance {
   id String @id @default(uuid())
-
-  type       String
-  capacityGB Int
+  name       String @default("storage-instance")
+  sku        String @default("Standard_LRS")
+  kind       String @default("StorageV2")
+  accessTier String @default("Hot")
 
   resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
   resourceConfigId String

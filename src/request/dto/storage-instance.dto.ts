@@ -4,15 +4,29 @@ import { IsInt, IsString } from 'class-validator';
 export class CreateStorageInstanceDto {
   @IsString()
   @ApiProperty({
-    example: 'SSD',
+    example: 'MyStorage',
+    description: 'The name of the storage instance',
+  })
+  name: string;
+
+  @IsString()
+  @ApiProperty({
+    example: 'Standard_LRS',
     description: 'The type of the storage instance',
   })
-  type: string;
+  sku: string;
 
   @IsInt()
   @ApiProperty({
-    example: '100',
-    description: 'The capacity of the storage instance (in GB)',
+    example: 'StorageV2',
+    description: 'The kind of the storage instance',
   })
-  capacityGB: number;
+  kind: number;
+
+  @IsString()
+  @ApiProperty({
+    example: 'Hot',
+    description: 'The access tier of the storage instance',
+  })
+  accessTier: string;
 }
