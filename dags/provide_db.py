@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from os.path import expanduser
 
 # -------------------------
 # Default DAG args
@@ -23,8 +24,11 @@ default_args = {
 import pika, json
 
 def rabbitmq_consumer():
-    load_dotenv(os.path.expanduser('opt/airflow/dags/.env'))
-    rabbit_url = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672")
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
+    rabbit_url = os.getenv("RABBITMQ_URL")
+    rabbit_url = "amqp://guest:guest@host.docker.internal:5672"
+    if not rabbit_url:
+        raise ValueError("RABBITMQ_URL is not set in .env")
 
     connection = pika.BlockingConnection(pika.URLParameters(rabbit_url))
     channel = connection.channel()
@@ -51,13 +55,13 @@ def fetch_from_database(request_id):
     if not request_id:
         raise ValueError("No message received from RabbitMQ. Stop DAG run.")
 
-    load_dotenv(os.path.expanduser('opt/airflow/dags/.env'))
+    load_dotenv(os.path.expanduser('/opt/airflow/dags/.env'))
 
-    USER = os.getenv("user")
-    PASSWORD = os.getenv("password")
-    HOST = os.getenv("host")
-    PORT = os.getenv("port")
-    DBNAME = os.getenv("dbname")
+    USER = os.getenv("USER")
+    PASSWORD = os.getenv("PASSWORD")
+    HOST = os.getenv("HOST")
+    PORT = os.getenv("PORT")
+    DBNAME = os.getenv("DBNAME")
 
     if not all([USER, PASSWORD, HOST, PORT, DBNAME]):
         raise ValueError("Database credentials are missing in .env")
@@ -117,7 +121,7 @@ def fetch_from_database(request_id):
 def create_terraform_directory(configInfo):
     config_dict = ast.literal_eval(configInfo)
     projectName = config_dict['repoName']
-    terraform_dir = f"/Users/pattiyayiadram/airflow/dags/terraform/{projectName}"
+    terraform_dir = f"/opt/airflow/dags/terraform/{projectName}/db"
     os.makedirs(terraform_dir, exist_ok=True)
     print(f"[x] Terraform directory ready: {terraform_dir}")
     return terraform_dir
@@ -134,7 +138,8 @@ def write_terraform_db_files(terraform_dir, configInfo):
     import ast
 
     config_dict = ast.literal_eval(configInfo)
-    db_keys = ["id", "name", "engine", "username", "password", "storageGB", "skuName"]
+    db_keys = ["id", "storageGB", "resourceConfigId", "name", "password", "skuName", "username", "engine"]
+
 
     def to_map(instance, keys):
         if not instance:
@@ -150,19 +155,19 @@ def write_terraform_db_files(terraform_dir, configInfo):
             return [to_map(instances, keys)]
 
     database_resources = ensure_list(config_dict.get("databaseInstance"), db_keys)
-    load_dotenv(expanduser('opt/airflow/dags/.env'))
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
 
     # -------------------------
     # terraform.auto.tfvars
     # -------------------------
     tfvars_content = f"""
-subscription_id      = "{os.getenv('AZURE_SUBSCRIPTION_ID')}"
-client_id            = "{os.getenv('AZURE_CLIENT_ID')}"
-client_secret        = "{os.getenv('AZURE_CLIENT_SECRET')}"
-tenant_id            = "{os.getenv('AZURE_TENANT_ID')}"
-project_location     = "{config_dict['region']}"
-database_resources   = {json.dumps(database_resources, indent=4)}
-"""
+        subscription_id      = "{os.getenv('AZURE_SUBSCRIPTION_ID')}"
+        client_id            = "{os.getenv('AZURE_CLIENT_ID')}"
+        client_secret        = "{os.getenv('AZURE_CLIENT_SECRET')}"
+        tenant_id            = "{os.getenv('AZURE_TENANT_ID')}"
+        project_location     = "{config_dict['region']}"
+        database_resources   = {json.dumps(database_resources, indent=4)}
+    """
     tfvars_file = os.path.join(terraform_dir, f"{config_dict['repoName']}-db.auto.tfvars")
     if not os.path.exists(tfvars_file):
         with open(tfvars_file, "w") as f:
@@ -173,13 +178,13 @@ database_resources   = {json.dumps(database_resources, indent=4)}
     # variables.tf
     # -------------------------
     variables_tf_content = """
-variable "subscription_id" {}
-variable "client_id" {}
-variable "client_secret" {}
-variable "tenant_id" {}
-variable "project_location" {}
-variable "database_resources" { type = list(map(any)) }
-"""
+        variable "subscription_id" {}
+        variable "client_id" {}
+        variable "client_secret" {}
+        variable "tenant_id" {}
+        variable "project_location" {}
+        variable "database_resources" { type = list(map(any)) }
+    """
     variables_file = os.path.join(terraform_dir, f"{config_dict['repoName']}-db.variables.tf")
     if not os.path.exists(variables_file):
         with open(variables_file, "w") as f:
@@ -192,53 +197,88 @@ variable "database_resources" { type = list(map(any)) }
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     main_tf_file = os.path.join(terraform_dir, f"{config_dict['repoName']}-db-{timestamp}.tf")
     main_tf_content = f"""
-terraform {{
-  required_providers {{
-    azurerm = {{
-      source  = "hashicorp/azurerm"
-      version = "~>3.0"
-    }}
-  }}
-}}
+        terraform {{
+        required_providers {{
+            azurerm = {{
+            source  = "hashicorp/azurerm"
+            version = "~>3.0"
+            }}
+        }}
+        }}
 
-provider "azurerm" {{
-  features {{}}
-  subscription_id = var.subscription_id
-  client_id       = var.client_id
-  client_secret   = var.client_secret
-  tenant_id       = var.tenant_id
-}}
+        provider "azurerm" {{
+        features {{}}
+        subscription_id = var.subscription_id
+        client_id       = var.client_id
+        client_secret   = var.client_secret
+        tenant_id       = var.tenant_id
+        }}
 
-resource "azurerm_resource_group" "rg" {{
-  name     = "rg-{config_dict['repoName']}"
-  location = var.project_location
-}}
+        # Conditional Resource Group
+        data "azurerm_resource_group" "existing" {{
+        name = "{config_dict['repoName']}"
+        }}
 
-resource "azurerm_postgresql_flexible_server" "db" {{
-  for_each = {{ for db in var.database_resources : db["id"] => db }}
+        resource "azurerm_resource_group" "rg" {{
+        count    = length(data.azurerm_resource_group.existing.*.name) == 0 ? 1 : 0
+        name     = "{config_dict['repoName']}"
+        location = var.project_location
+        }}
 
-  name                = each.value["name"]
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  sku_name            = lookup(each.value, "skuName", "B_Standard_B1ms")
-  version             = each.value["engine"]
-  administrator_login    = each.value["username"]
-  administrator_password = each.value["password"]
-  storage_mb = each.value["storageGB"] * 1024
-  backup_retention_days       = 7
-  high_availability_mode      = "Disabled"
-  public_network_access_enabled = true
-}}
+        locals {{
+        rg_name     = length(data.azurerm_resource_group.existing.*.name) > 0 ? data.azurerm_resource_group.existing.name : azurerm_resource_group.rg[0].name
+        rg_location = length(data.azurerm_resource_group.existing.*.name) > 0 ? data.azurerm_resource_group.existing.location : azurerm_resource_group.rg[0].location
+        }}
 
-output "db_names" {{
-  value = {{ for k, v in azurerm_postgresql_flexible_server.db : k => v.name }}
-}}
-"""
+        # PostgreSQL Flexible Server
+        resource "azurerm_postgresql_flexible_server" "postgres" {{
+        for_each = {{
+            for db in var.database_resources : db.id => db
+            if lower(db.engine) == "postgresql"
+        }}
+
+        name                            = each.value.name
+        resource_group_name             = local.rg_name
+        location                        = local.rg_location
+        sku_name                        = lookup(each.value, "skuName", "B_Standard_B1ms")
+        version                         = 15
+        administrator_login             = each.value.username
+        administrator_password          = each.value.password
+        storage_mb                      = each.value.storageGB
+        backup_retention_days           = 7
+        }}
+
+        # MySQL Flexible Server
+        resource "azurerm_mysql_flexible_server" "mysql" {{
+        for_each = {{
+            for db in var.database_resources : db.id => db
+            if lower(db.engine) == "mysql"
+        }}
+
+        name                            = each.value.name
+        resource_group_name             = local.rg_name
+        location                        = local.rg_location
+        sku_name                        = lookup(each.value, "skuName", "B_Standard_B1ms")
+        version                         = "8.0.21"
+        administrator_login             = each.value.username
+        administrator_password          = each.value.password
+        backup_retention_days           = 7
+        }}
+
+        output "postgres_db_names" {{
+        value = {{ for k, v in azurerm_postgresql_flexible_server.postgres : k => v.name }}
+        }}
+
+        output "mysql_db_names" {{
+        value = {{ for k, v in azurerm_mysql_flexible_server.mysql : k => v.name }}
+        }}
+        """
     with open(main_tf_file, "w") as f:
         f.write(main_tf_content)
-    print(f"[x] Created {main_tf_file}")
+        print(f"[x] Created {main_tf_file}")
 
     return main_tf_file
+
 
 # -------------------------
 # DAG Definition
@@ -276,14 +316,17 @@ with DAG(
                  "{{ ti.xcom_pull(task_ids='fetch_config') }}"],
     )
 
+    # Terraform Init
     terraform_init = BashOperator(
         task_id="terraform_init",
         bash_command="cd {{ ti.xcom_pull(task_ids='create_terraform_dir') }} && set -e && terraform init",
     )
 
+    # Terraform Apply
     terraform_apply = BashOperator(
         task_id="terraform_apply",
         bash_command="cd {{ ti.xcom_pull(task_ids='create_terraform_dir') }} && set -e && terraform apply -auto-approve",
     )
+
 
     consume_task >> fetch_task >> create_dir_task >> write_files_task >> terraform_init >> terraform_apply

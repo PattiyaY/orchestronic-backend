@@ -28,9 +28,9 @@ default_args = {
 # Step 1: RabbitMQ Consumer
 # -------------------------
 def rabbitmq_consumer():
-    load_dotenv(expanduser('opt/airflow/dags/.env'))
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
     rabbit_url = os.getenv("RABBITMQ_URL")
-    rabbit_url = "amqp://guest:guest@localhost:5672"
+    rabbit_url = "amqp://guest:guest@host.docker.internal:5672"
     if not rabbit_url:
         raise ValueError("RABBITMQ_URL is not set in .env")
 
@@ -63,14 +63,14 @@ def fetch_from_database(request_id):
         raise ValueError("No message received from RabbitMQ. Stop DAG run.")
 
     # Load environment variables
-    load_dotenv(expanduser('opt/airflow/dags/.env'))
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
 
     # Fetch variables
-    USER = os.getenv("user")
-    PASSWORD = os.getenv("password")
-    HOST = os.getenv("host")
-    PORT = os.getenv("port")
-    DBNAME = os.getenv("dbname")
+    USER = os.getenv("USER")
+    PASSWORD = os.getenv("PASSWORD")
+    HOST = os.getenv("HOST")
+    PORT = os.getenv("PORT")
+    DBNAME = os.getenv("DBNAME")
 
     if not all([USER, PASSWORD, HOST, PORT, DBNAME]):
         raise ValueError("Database credentials are missing in .env")
@@ -86,7 +86,10 @@ def fetch_from_database(request_id):
         cursor = connection.cursor()
 
         # 1️⃣ Get resourcesId from requests table
-        cursor.execute('SELECT "resourcesId" FROM "Request" WHERE id = %s;', (request_id,))
+        cursor.execute(
+            'SELECT "resourcesId" FROM "Request" WHERE id = %s;', 
+            (request_id,)
+        )
         res = cursor.fetchone()
         if not res:
             raise ValueError(f"No request found for id={request_id}")
@@ -97,7 +100,8 @@ def fetch_from_database(request_id):
             SELECT "name", "region", "cloudProvider", "resourceConfigId" 
             FROM "Resources" 
             WHERE id = %s;
-        ''', (resourcesId,))
+            ''', (resourcesId,)
+        )
         resource = cursor.fetchone()
         if not resource:
             raise ValueError(f"No resource found for resourcesId={resourcesId}")
@@ -105,16 +109,17 @@ def fetch_from_database(request_id):
         repoName, region, cloudProvider, resourceConfigId = resource
 
         # 3️⃣ Get VM instance
-        cursor.execute('SELECT * FROM "VMInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
+        cursor.execute(
+            'SELECT * FROM "VMInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,)
+        )
         vmInstance = cursor.fetchone()
-
-        # 4️⃣ Get Database instance
-        cursor.execute('SELECT * FROM "DatabaseInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
-        databaseInstance = cursor.fetchone()
-
-        # 5️⃣ Get Storage instance
-        cursor.execute('SELECT * FROM "StorageInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
-        storageInstance = cursor.fetchone()
+    
+        # 4️⃣ Get VM size details
+        cursor.execute(
+            'SELECT * FROM "AzureVMSize" WHERE "id" = %s;',
+            (vmInstance[-1],)
+        )
+        vmSize = cursor.fetchone()
 
         # Close cursor and connection
         cursor.close()
@@ -127,6 +132,7 @@ def fetch_from_database(request_id):
             "region": region,
             "cloudProvider": cloudProvider,
             "vmInstance": vmInstance,
+            "vmSize": vmSize
         }
 
         return configInfo
@@ -141,7 +147,7 @@ def fetch_from_database(request_id):
 def create_terraform_directory(configInfo):
     config_dict = ast.literal_eval(configInfo)
     projectName = config_dict['repoName']
-    terraform_dir = f"/Users/pattiyayiadram/airflow/dags/terraform/{projectName}"
+    terraform_dir = f"/opt/airflow/dags/terraform/{projectName}/vm"
     os.makedirs(terraform_dir, exist_ok=True)
     print(f"[x] Created directory {terraform_dir}")
     return terraform_dir
@@ -206,7 +212,7 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
 
     vm_resources = ensure_list(config_dict.get("vmInstance"), vm_keys)
 
-    load_dotenv(expanduser('opt/airflow/dags/.env'))
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
     # terraform.auto.tfvars
     tfvars_content = f"""
 subscription_id      = "{os.getenv('AZURE_SUBSCRIPTION_ID')}"
@@ -240,21 +246,32 @@ provider "azurerm" {{
   tenant_id       = var.tenant_id
 }}
 
+# Conditional Resource Group
+data "azurerm_resource_group" "existing" {{
+  name = "{config_dict['repoName']}"
+}}
+
 resource "azurerm_resource_group" "rg" {{
-  name     = "rg-{config_dict['repoName']}"
+  count    = length(data.azurerm_resource_group.existing.*.name) == 0 ? 1 : 0
+  name     = "{config_dict['repoName']}"
   location = var.project_location
+}}
+
+locals {{
+  rg_name     = length(data.azurerm_resource_group.existing.*.name) > 0 ? data.azurerm_resource_group.existing.name : azurerm_resource_group.rg[0].name
+  rg_location = length(data.azurerm_resource_group.existing.*.name) > 0 ? data.azurerm_resource_group.existing.location : azurerm_resource_group.rg[0].location
 }}
 
 resource "azurerm_virtual_network" "vnet" {{
   name                = "vnet-{config_dict['repoName']}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = local.rg_location
+  resource_group_name = local.rg_name
   address_space       = ["10.0.0.0/16"]
 }}
 
 resource "azurerm_subnet" "subnet" {{
   name                 = "subnet-{config_dict['repoName']}"
-  resource_group_name  = azurerm_resource_group.rg.name
+  resource_group_name  = local.rg_name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.0.1.0/24"]
 }}
@@ -264,8 +281,8 @@ resource "azurerm_public_ip" "public_ip" {{
   for_each = {{ for vm in var.vm_resources : vm.id => vm }}
 
   name                = "publicip-${{each.value.name}}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = local.rg_location
+  resource_group_name = local.rg_name
   allocation_method   = "Dynamic"
 }}
 
@@ -274,8 +291,8 @@ resource "azurerm_network_interface" "nic" {{
   for_each = {{ for vm in var.vm_resources : vm.id => vm }}
 
   name                = "nic-${{each.value.name}}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = local.rg_location
+  resource_group_name = local.rg_name
 
   ip_configuration {{
     name                          = "internal"
@@ -290,9 +307,9 @@ resource "azurerm_linux_virtual_machine" "vm" {{
   for_each = {{ for vm in var.vm_resources : vm.id => vm }}
 
   name                 = "${{each.value.name}}-vm"
-  resource_group_name  = azurerm_resource_group.rg.name
-  location             = azurerm_resource_group.rg.location
-  size                 = "Standard_B1s"
+  resource_group_name  = local.rg_name
+  location             = local.rg_location
+  size                 = "{config_dict['vmSize'][1]}"
   admin_username       = "azureuser"
   network_interface_ids = [
     azurerm_network_interface.nic[each.key].id

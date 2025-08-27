@@ -90,10 +90,10 @@ model VMInstance {
 model DatabaseInstance {
   id String @id @default(uuid())
   name       String @default("database-instance")
-  username   String @default("admin")
+  username   String @default("orchestronic_user")
   password   String @default("P@ssw0rd!")
   engine    Engine @default(PostgreSQL)
-  storageGB Int @default(2048)
+  storageGB Int @default(32768)
   skuName   String @default("B_Standard_B1ms")
 
   resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)

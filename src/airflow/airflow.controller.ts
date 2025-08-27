@@ -13,7 +13,6 @@ import { RequestWithCookies } from '../lib/types';
 import * as jwt from 'jsonwebtoken';
 import { DagDto } from './dto/dag.dto';
 
-@ApiBearerAuth('access-token')
 @Controller('airflow')
 export class AirflowController {
   constructor(private readonly airflowService: AirflowService) {}
@@ -27,7 +26,7 @@ export class AirflowController {
   triggerDag(
     @Request() req: RequestWithCookies,
     @Param('dagId') dagId: string,
-    @Body() body: DagDto,
+    // @Body() body: DagDto,
   ) {
     const token = req.cookies?.['access_token'];
     if (token === undefined) {
@@ -42,7 +41,7 @@ export class AirflowController {
     try {
       const decoded = jwt.verify(token, secret) as unknown;
       const payload = decoded as BackendJwtPayload;
-      return this.airflowService.triggerDag(payload, dagId, body);
+      return this.airflowService.triggerDag(payload, dagId);
     } catch (error) {
       throw new UnauthorizedException('Invalid token - unable to process');
     }
