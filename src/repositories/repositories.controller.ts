@@ -22,7 +22,6 @@ export class RepositoriesController {
     return this.repositoriesService.findByName(name);
   }
 
-  @ApiBearerAuth('access-token')
   @Post()
   @ApiOperation({
     summary: 'Create a new repository',
@@ -31,7 +30,6 @@ export class RepositoriesController {
     return this.repositoriesService.createRepository(repository);
   }
 
-  @ApiBearerAuth('access-token')
   @Get()
   @ApiOperation({
     summary: 'Find all repositories for the authenticated user',

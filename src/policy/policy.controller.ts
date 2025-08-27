@@ -24,7 +24,6 @@ import { DBPolicyDto } from './dto/db-policy.dto';
 import { STPolicyDto } from './dto/st-policy.dto';
 import { CloudProvider } from '@prisma/client';
 
-@ApiBearerAuth('access-token')
 @Controller('policy')
 export class PolicyController {
   constructor(private readonly policyService: PolicyService) {}

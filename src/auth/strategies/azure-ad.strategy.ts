@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { OIDCStrategy } from 'passport-azure-ad';
 import { profile } from 'console';
 import { DatabaseService } from 'src/database/database.service';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class AzureStrategy extends PassportStrategy(OIDCStrategy, 'azure-ad') {
@@ -21,10 +22,22 @@ export class AzureStrategy extends PassportStrategy(OIDCStrategy, 'azure-ad') {
   }
 
   async validate(profile: any) {
-    // Just pass user info forward
+    const email = profile._json.preferred_username;
+
     let user = await this.databaseService.user.findUnique({
-      where: { email: profile._json.preferred_username },
+      where: { email },
     });
+
+    if (!user) {
+      user = await this.databaseService.user.create({
+        data: {
+          email,
+          name: profile._json.name,
+          role: Role.Developer,
+        },
+      });
+    }
+
     return user;
   }
 }

@@ -41,7 +41,6 @@ export class UserController {
     return users;
   }
 
-  @ApiBearerAuth('access-token')
   @Patch('/role')
   @ApiOperation({
     summary: 'Update user role by user ID',
@@ -133,7 +132,6 @@ export class UserController {
     return users;
   }
 
-  @ApiBearerAuth('access-token')
   @Get('me')
   @ApiOperation({
     summary: 'Get all requests for the authenticated user',

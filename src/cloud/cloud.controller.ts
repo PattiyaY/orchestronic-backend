@@ -19,7 +19,6 @@ import { BackendJwtPayload } from '../lib/types';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CloudProvider } from '@prisma/client';
 
-@ApiBearerAuth('access-token')
 @Controller('cloud')
 export class CloudController {
   constructor(private readonly cloudService: CloudService) {}

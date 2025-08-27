@@ -17,7 +17,6 @@ import { RequestWithCookies } from '../lib/types';
 import { UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 
-@ApiBearerAuth('access-token')
 @Controller('resource')
 export class ResourceController {
   constructor(private readonly resourceService: ResourceService) {}

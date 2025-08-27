@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,126 +9,103 @@ datasource db {
 }
 
 model Request {
-  id          String  @id @default(uuid())
-  displayCode String  @unique
-  status      Status  @default(Pending)
-  description String
-  feedback    String?
-  owner       User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  ownerId     String
-
-  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  id           String     @id @default(uuid())
+  status       Status     @default(Pending)
+  description  String
+  resourcesId  String     @unique
   repositoryId String     @unique
-
-  resources   Resources @relation(fields: [resourcesId], references: [id], onDelete: Cascade)
-  resourcesId String    @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ownerId      String
+  createdAt    DateTime   @default(now())
+  displayCode  String     @unique
+  updatedAt    DateTime   @updatedAt
+  feedback     String?
+  owner        User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  resources    Resources  @relation(fields: [resourcesId], references: [id], onDelete: Cascade)
 }
 
 model Repository {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  description String?
-
-  request Request?
-
-  resources   Resources @relation(fields: [resourcesId], references: [id], onDelete: Cascade)
-  resourcesId String    @unique
-
-  collaborators User[]           @relation("RepositoryCollaborators")
-  status        RepositoryStatus @default(Pending)
-
-  UserRepository         ownedRepository[]
+  id                     String                   @id @default(cuid())
+  name                   String                   @unique
+  description            String?
+  resourcesId            String                   @unique
+  status                 RepositoryStatus         @default(Pending)
+  resources              Resources                @relation(fields: [resourcesId], references: [id], onDelete: Cascade)
   RepositoryCollaborator RepositoryCollaborator[]
+  request                Request?
+  UserRepository         ownedRepository[]
+  collaborators          User[]                   @relation("RepositoryCollaborators")
 }
 
 model Resources {
-  id String @id @default(uuid())
-
-  name          String
-  cloudProvider String
-  region        String
-
-  repository Repository?
-
-  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
+  id               String         @id @default(uuid())
+  name             String
+  cloudProvider    String
+  region           String
   resourceConfigId String         @unique
-
-  request Request?
+  repository       Repository?
+  request          Request?
+  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
 }
 
 model ResourceConfig {
-  id String @id @default(uuid())
-
-  vms VMInstance[]
-  dbs DatabaseInstance[]
-  sts StorageInstance[]
-
+  id        String             @id @default(uuid())
+  dbs       DatabaseInstance[]
   resources Resources?
+  sts       StorageInstance[]
+  vms       VMInstance[]
 }
 
 model VMInstance {
-  id String @id @default(uuid())
-
-  name   String
-  os     String
-  size   AzureVMSize @relation(fields: [sizeId], references: [id], onDelete: Cascade)
-  sizeId String
-
-  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
+  id               String         @id @default(uuid())
+  name             String
+  os               String
   resourceConfigId String
+  sizeId           String
+  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
+  size             AzureVMSize    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
 }
 
 model DatabaseInstance {
-  id String @id @default(uuid())
-  name       String @default("database-instance")
-  username   String @default("orchestronic_user")
-  password   String @default("P@ssw0rd!")
-  engine    Engine @default(PostgreSQL)
-  storageGB Int @default(32768)
-  skuName   String @default("B_Standard_B1ms")
-
-  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
+  id               String         @id @default(uuid())
+  storageGB        Int            @default(32768)
   resourceConfigId String
+  name             String         @default("database-instance")
+  password         String         @default("P@ssw0rd!")
+  skuName          String         @default("B_Standard_B1ms")
+  username         String         @default("orchestronic_user")
+  engine           Engine         @default(PostgreSQL)
+  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
 }
 
 model StorageInstance {
-  id String @id @default(uuid())
-  name       String @default("storage-instance")
-  sku        String @default("Standard_LRS")
-  kind       String @default("StorageV2")
-  accessTier String @default("Hot")
-
-  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
+  id               String         @id @default(uuid())
   resourceConfigId String
+  accessTier       String         @default("Hot")
+  kind             String         @default("StorageV2")
+  name             String         @default("storage-instance")
+  sku              String         @default("Standard_LRS")
+  resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id    String @id @default(uuid())
-  name  String
-  email String @unique
-  role  Role
-
-  collaboratedRepos      Repository[]             @relation("RepositoryCollaborators")
+  id                     String                   @id @default(uuid())
+  name                   String
+  email                  String                   @unique
+  role                   Role
+  CloudResourceSecret    CloudResourceSecret[]
+  RefreshToken           RefreshToken[]
+  RepositoryCollaborator RepositoryCollaborator[]
   request                Request[]
   UserRepository         ownedRepository[]
-  RepositoryCollaborator RepositoryCollaborator[]
-  RefreshToken           RefreshToken[]
-  CloudResourceSecret    CloudResourceSecret[]
-}
-
-enum RepositoryStatus {
-  Created
-  Pending
+  collaboratedRepos      Repository[]             @relation("RepositoryCollaborators")
 }
 
 model ownedRepository {
   userId       String
   repositoryId String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, repositoryId])
 }
@@ -142,14 +113,12 @@ model ownedRepository {
 model RepositoryCollaborator {
   userId       String
   repositoryId String
+  assignedAt   DateTime   @default(now())
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
-
-  assignedAt DateTime @default(now()) // optional: track metadata
-
-  @@id([userId, repositoryId]) // Composite PK to prevent duplicates
-  @@map("RepositoryCollaborators") // Name the actual table in the DB
+  @@id([userId, repositoryId])
+  @@map("RepositoryCollaborators")
 }
 
 model RefreshToken {
@@ -158,8 +127,7 @@ model RefreshToken {
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CloudResourceSecret {
@@ -168,9 +136,9 @@ model CloudResourceSecret {
   clientSecret   String
   subscriptionId String        @unique
   tenantId       String?
-  User           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String
   cloudProvider  CloudProvider
+  userId         String
+  User           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AzureVMSize {
@@ -187,8 +155,8 @@ model AzureVMSize {
 model PolicyVM {
   id            String        @id @default(uuid())
   name          String
-  numberOfCores Int
   memoryInMB    Int
+  numberOfCores Int
   cloudProvider CloudProvider @unique
 }
 
@@ -204,6 +172,11 @@ model PolicyStorage {
   cloudProvider CloudProvider @unique
 }
 
+enum RepositoryStatus {
+  Created
+  Pending
+}
+
 enum CloudProvider {
   AWS
   AZURE
@@ -216,9 +189,9 @@ enum Status {
 }
 
 enum Role {
-  Developer
   Admin
   IT
+  Developer
 }
 
 enum Engine {
