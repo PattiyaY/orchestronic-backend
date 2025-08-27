@@ -21,7 +21,7 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL,
+    origin: 'https://orchestronic-frontend.vercel.app',
     credentials: true, // allow cookies
   });
 
