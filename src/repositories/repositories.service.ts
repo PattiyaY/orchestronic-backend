@@ -122,8 +122,10 @@ export class RepositoriesService {
         },
         sts: {
           create: resources.resourceConfig.sts.map((st) => ({
-            type: st.type,
-            capacityGB: st.capacityGB,
+            name: st.name,
+            sku: st.sku,
+            kind: st.kind,
+            accessTier: st.accessTier,
           })),
         },
       },
