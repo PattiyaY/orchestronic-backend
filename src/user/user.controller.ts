@@ -17,7 +17,7 @@ import { FindUserByEmailDto } from './dto/find-user-by-email.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiOperation } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 import { BackendJwtPayload } from '../lib/types';
 import { RequestWithCookies } from '../lib/types';
