@@ -233,7 +233,7 @@ export class RequestController {
         RepositoryStatus.Created,
       );
 
-      await this.rabbitmqService.queueRequest(id.toString());
+      this.rabbitmqService.queueRequest(id.toString());
     }
 
     return updated;

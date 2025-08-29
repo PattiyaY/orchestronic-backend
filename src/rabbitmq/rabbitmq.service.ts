@@ -1,6 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { lastValueFrom, timeout } from 'rxjs';
 
 @Injectable()
 export class RabbitmqService {
