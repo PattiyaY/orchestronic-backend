@@ -9,11 +9,22 @@ import { Prisma, Status, Role } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ApiBody } from '@nestjs/swagger';
+import { GitlabService } from '../gitlab/gitlab.service';
+import { RepositoriesService } from '../repositories/repositories.service';
 import { BackendJwtPayload } from '../lib/types';
+import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
+import { AirflowService } from '../airflow/airflow.service';
+import { RequestStatus } from './dto/request-status.dto';
 
 @Injectable()
 export class RequestService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly gitlabService: GitlabService,
+    private readonly repositoryService: RepositoriesService,
+    private readonly rabbitmqService: RabbitmqService,
+    private readonly airflowService: AirflowService,
+  ) {}
 
   async findAll(user: BackendJwtPayload) {
     const whereClause =
@@ -179,14 +190,58 @@ export class RequestService {
     return newRequest;
   }
 
-  async updateRequestInfo(id: string, updateData: Prisma.RequestUpdateInput) {
-    return this.databaseService.request.update({
+  async updateRequestInfo(
+    user: BackendJwtPayload,
+    id: string,
+    updateData: Prisma.RequestUpdateInput,
+  ) {
+    const updateStatus = this.databaseService.request.update({
       where: { id: id.toString() },
       data: updateData,
       include: {
         repository: true,
       },
     });
+
+    // TODO: Fetch data from DB to see how many resources of each type were requested
+    if (updateData.status === RequestStatus.Approved) {
+      const resourceConfigId = await this.databaseService.request.findUnique({
+        where: { id: id.toString() },
+        select: { resources: { select: { resourceConfigId: true } } },
+      });
+
+      const findNumberOfVM = await this.databaseService.vMInstance.count({
+        where: {
+          resourceConfigId: resourceConfigId?.resources.resourceConfigId,
+        },
+      });
+
+      const findNumberOfDB = await this.databaseService.databaseInstance.count({
+        where: {
+          resourceConfigId: resourceConfigId?.resources.resourceConfigId,
+        },
+      });
+
+      const findNumberOfST = await this.databaseService.storageInstance.count({
+        where: {
+          resourceConfigId: resourceConfigId?.resources.resourceConfigId,
+        },
+      });
+
+      // let maxIteration = 0;
+      // if (
+      //   (findNumberOfVM && findNumberOfVM > 0) ||
+      //   (findNumberOfDB && findNumberOfDB > 0) ||
+      //   (findNumberOfST && findNumberOfST > 0)
+      // ) {
+      //   maxIteration = 3
+      // } else if (
+
+      // TODO: condition to assign how many times the loop will run according to the number of resources requested
+      await this.rabbitmqService.queueRequest(id.toString());
+      await this.airflowService.triggerDag(user, 'terraform_vm_provision');
+    }
+    return updateStatus;
   }
 
   async updateRequestFeedback(id: string, feedback?: string) {

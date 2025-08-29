@@ -34,16 +34,12 @@ import { GetVmSizesDto } from './dto/get-vm-sizes.dto';
 import { PaginatedVmSizesDto } from './dto/paginated-vm-sizes.dto';
 import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 import { GitlabService } from '../gitlab/gitlab.service';
-import { RepositoriesService } from '../repositories/repositories.service';
-import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 
 @Controller('request')
 export class RequestController {
   constructor(
     private readonly requestService: RequestService,
     private readonly gitlabService: GitlabService,
-    private readonly repositoryService: RepositoriesService,
-    private readonly rabbitmqService: RabbitmqService,
   ) {}
 
   @Get()
@@ -183,8 +179,28 @@ export class RequestController {
   updateRequestInfo(
     @Param('id') id: string,
     @Body() requestUpdate: Prisma.RequestUpdateInput,
+    @Req() req: RequestWithCookies,
   ) {
-    return this.requestService.updateRequestInfo(id, { ...requestUpdate });
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
+
+    try {
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.requestService.updateRequestInfo(payload, id, {
+        ...requestUpdate,
+      });
+    } catch (err) {
+      console.error('Request Controller: Error decoding token', err);
+      throw new UnauthorizedException('Invalid token');
+    }
   }
 
   @Patch(':id/status')
@@ -214,26 +230,20 @@ export class RequestController {
         'You do not have permission to update status',
       );
     }
-    const updated = await this.requestService.updateRequestInfo(id, {
+    const updated = await this.requestService.updateRequestInfo(payload, id, {
       status,
     });
 
-    if (!updated) {
-      throw new NotFoundException(`Request with id ${id} not found`);
-    }
-
-    if (status === RequestStatus.Approved) {
+    if (updated.status === RequestStatus.Approved) {
       await this.gitlabService.createProject({
         name: updated.repository.name,
         description: updated.repository.description || '',
         visibility: 'public',
       });
-      await this.repositoryService.updateRepository(
-        updated.repository.id,
-        RepositoryStatus.Created,
-      );
+    }
 
-      await this.rabbitmqService.queueRequest(id.toString());
+    if (!updated) {
+      throw new NotFoundException(`Request with id ${id} not found`);
     }
 
     return updated;

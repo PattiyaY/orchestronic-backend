@@ -7,9 +7,12 @@ import { RepositoriesService } from 'src/repositories/repositories.service';
 import { RabbitmqService } from 'src/rabbitmq/rabbitmq.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { PassportModule } from '@nestjs/passport';
+import { AirflowService } from 'src/airflow/airflow.service';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
+    HttpModule,
     DatabaseModule,
     ClientsModule.register([
       {
@@ -31,6 +34,7 @@ import { PassportModule } from '@nestjs/passport';
     GitlabService,
     RepositoriesService,
     RabbitmqService,
+    AirflowService,
   ],
 })
 export class RequestModule {}
