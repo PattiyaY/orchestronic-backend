@@ -40,6 +40,7 @@ export class RepositoriesService {
         id: true,
         name: true,
         description: true,
+        status: true,
         request: {
           select: {
             owner: {

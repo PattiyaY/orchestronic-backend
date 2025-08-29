@@ -27,6 +27,7 @@ import { PolicyController } from './policy/policy.controller';
 import { PolicyModule } from './policy/policy.module';
 import { HttpModule } from '@nestjs/axios';
 import { GitlabModule } from './gitlab/gitlab.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { GitlabModule } from './gitlab/gitlab.module';
       autoLoadEntities: true,
       synchronize: true,
     }),
+    ScheduleModule.forRoot(),
     RequestModule,
     DatabaseModule,
     UserModule,

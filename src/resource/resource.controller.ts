@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Request,
+  Query,
 } from '@nestjs/common';
 import { ResourceService } from './resource.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
@@ -52,6 +53,11 @@ export class ResourceController {
       console.error('Resource Controller: Error decoding token', err);
       throw new UnauthorizedException('Invalid token');
     }
+  }
+
+  @Get('vm-price')
+  getVmPrice(@Query('vmSize') vmSize: string, @Query('region') region: string) {
+    return this.resourceService.getVmPrice(vmSize, region);
   }
 
   @Get(':id')
