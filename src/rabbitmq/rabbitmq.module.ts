@@ -18,5 +18,6 @@ import { RabbitmqService } from './rabbitmq.service';
   ],
   controllers: [RabbitmqController],
   providers: [RabbitmqService],
+  exports: [RabbitmqService],
 })
 export class RabbitmqModule {}

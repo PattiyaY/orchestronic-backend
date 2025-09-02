@@ -1,7 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { CreateCloudProviderDto } from './dto/create-cloud-provider.dto';
-import { UpdateCloudProviderDto } from './dto/update-cloud-provider.dto';
-import { CloudProvider } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
 import { RequestService } from 'src/request/request.service';
 import { GetVmSizesDto } from 'src/request/dto/get-vm-sizes.dto';

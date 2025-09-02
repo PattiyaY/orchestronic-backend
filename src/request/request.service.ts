@@ -9,8 +9,6 @@ import { Prisma, Status, Role } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ApiBody } from '@nestjs/swagger';
-import { GitlabService } from '../gitlab/gitlab.service';
-import { RepositoriesService } from '../repositories/repositories.service';
 import { BackendJwtPayload } from '../lib/types';
 import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
 import { AirflowService } from '../airflow/airflow.service';
@@ -20,8 +18,6 @@ import { RequestStatus } from './dto/request-status.dto';
 export class RequestService {
   constructor(
     private readonly databaseService: DatabaseService,
-    private readonly gitlabService: GitlabService,
-    private readonly repositoryService: RepositoriesService,
     private readonly rabbitmqService: RabbitmqService,
     private readonly airflowService: AirflowService,
   ) {}
