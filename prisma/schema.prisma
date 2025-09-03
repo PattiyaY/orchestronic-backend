@@ -40,7 +40,7 @@ model Repository {
 model Resources {
   id               String         @id @default(uuid())
   name             String
-  cloudProvider    String
+  cloudProvider    CloudProvider
   region           String
   resourceConfigId String         @unique
   repository       Repository?
