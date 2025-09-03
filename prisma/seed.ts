@@ -6,6 +6,7 @@ async function main() {
 
   await import('./seed/seed-azure-vm-size');
   await import('./seed/seed-policy');
+  await import('./seed/seed-aws-instance-type');
   // await import('./seed/seed-user');
   // await import('./seed/seed-repositories');
   // await import('./seed/seed-request');

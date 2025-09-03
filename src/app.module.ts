@@ -28,6 +28,7 @@ import { PolicyModule } from './policy/policy.module';
 import { HttpModule } from '@nestjs/axios';
 import { GitlabModule } from './gitlab/gitlab.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CloudProvidersModule } from './cloud-providers/cloud-providers.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     CloudModule,
     PolicyModule,
     GitlabModule,
+    CloudProvidersModule,
   ],
   controllers: [
     AppController,
