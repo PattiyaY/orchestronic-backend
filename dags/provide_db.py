@@ -141,7 +141,7 @@ def write_terraform_db_files(terraform_dir, configInfo):
     config_dict = ast.literal_eval(configInfo)
     db_keys = ["id", "storageGB", "resourceConfigId", "name", "password", "skuName", "username", "engine"]
 
-    projectName = f"rg-{config_dict['repoName']}-{config_dict['resourcesId'][:4]}"
+    projectName = f"{config_dict['repoName']}-{config_dict['resourcesId'][:4]}"
 
     def to_map(instance, keys):
         if not instance:
@@ -203,7 +203,11 @@ def write_terraform_db_files(terraform_dir, configInfo):
         default = "{config_dict['region']}"
         }}
 
-        variable "db_resources" {{
+        variable "repoName" {{
+        default = "{projectName}"
+        }}
+
+        variable "database_resources" {{
         type = list(map(any))
         }}
     """
@@ -237,15 +241,14 @@ def write_terraform_db_files(terraform_dir, configInfo):
         tenant_id       = var.tenant_id
         }}
 
-        resource "azurerm_resource_group" "rg" {{
-        name     = "{projectName}"
-        location = var.project_location
+        data "azurerm_resource_group" "rg" {{
+        name = "{projectName}"
         }}
 
         locals {{
-        rg_name     = azurerm_resource_group.rg.name
-        rg_location = azurerm_resource_group.rg.location
-        }}
+        rg_name     = data.azurerm_resource_group.rg.name
+        rg_location = data.azurerm_resource_group.rg.location
+        }}  
 
         # PostgreSQL Flexible Server
         resource "azurerm_postgresql_flexible_server" "postgres" {{
@@ -339,18 +342,18 @@ with DAG(
     )
 
     # Import RG if exists in Azure
-    terraform_import = BashOperator(
-        task_id="terraform_import_rg",
-        bash_command=(
-            "cd {{ ti.xcom_pull(task_ids='create_terraform_dir') }} && "
-            "terraform import -no-color "
-            "azurerm_resource_group.rg "
-            '"/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/rg-{{ ti.xcom_pull(task_ids=\'fetch_config\')[\'repoName\'] }}-{{ ti.xcom_pull(task_ids=\'fetch_config\')[\'resourcesId\'][:4] }}" || true'
-        ),
-        env={
-            "AZURE_SUBSCRIPTION_ID": os.getenv("AZURE_SUBSCRIPTION_ID", ""),
-        }
-    )
+    # terraform_import = BashOperator(
+    #     task_id="terraform_import_rg",
+    #     bash_command=(
+    #         "cd {{ ti.xcom_pull(task_ids='create_terraform_dir') }} && "
+    #         "terraform import -no-color "
+    #         "azurerm_resource_group.rg "
+    #         '"/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/rg-{{ ti.xcom_pull(task_ids=\'fetch_config\')[\'repoName\'] }}-{{ ti.xcom_pull(task_ids=\'fetch_config\')[\'resourcesId\'][:4] }}" || true'
+    #     ),
+    #     env={
+    #         "AZURE_SUBSCRIPTION_ID": os.getenv("AZURE_SUBSCRIPTION_ID", ""),
+    #     }
+    # )
 
     # Terraform Apply
     terraform_apply = BashOperator(
@@ -358,4 +361,4 @@ with DAG(
         bash_command="cd {{ ti.xcom_pull(task_ids='create_terraform_dir') }} && set -e && terraform apply -auto-approve",
     )
 
-    fetch_task >> create_dir_task >> write_files_task >> terraform_init >> terraform_import >> terraform_apply
+    fetch_task >> create_dir_task >> write_files_task >> terraform_init >> terraform_apply
