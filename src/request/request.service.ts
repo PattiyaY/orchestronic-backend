@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, Status, Role } from '@prisma/client';
+import { Prisma, Status, Role, CloudProvider } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ApiBody } from '@nestjs/swagger';
@@ -128,7 +128,7 @@ export class RequestService {
     const newResource = await this.databaseService.resources.create({
       data: {
         name: resources.name,
-        cloudProvider: resources.cloudProvider,
+        cloudProvider: resources.cloudProvider as CloudProvider,
         region: resources.region,
         resourceConfig: { connect: { id: resourceConfig.id } },
       },

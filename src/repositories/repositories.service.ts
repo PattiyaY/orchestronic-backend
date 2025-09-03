@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateRepositoriesDto } from './dto/create-repository.dto';
 import { BackendJwtPayload } from '../lib/types';
-import { RepositoryStatus, Role } from '@prisma/client';
+import { CloudProvider, RepositoryStatus, Role } from '@prisma/client';
 
 @Injectable()
 export class RepositoriesService {
@@ -135,7 +135,7 @@ export class RepositoriesService {
     const newResources = await this.databaseService.resources.create({
       data: {
         name: resources.name,
-        cloudProvider: resources.cloudProvider,
+        cloudProvider: resources.cloudProvider as CloudProvider,
         region: resources.region,
         resourceConfig: {
           connect: {
