@@ -30,6 +30,7 @@ import { AzurePolicyModule } from './azure-policy/azure-policy.module';
 import { AzurePolicyController } from './azure-policy/azure-policy.controller';
 import { AzurePolicyService } from './azure-policy/azure-policy.service';
 import { AwsPolicyModule } from './aws-policy/aws-policy.module';
+import { InfrastructureModule } from './infrastructure/infrastructure.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { AwsPolicyModule } from './aws-policy/aws-policy.module';
     GitlabModule,
     CloudProvidersModule,
     AwsPolicyModule,
+    InfrastructureModule,
   ],
   controllers: [
     AppController,
