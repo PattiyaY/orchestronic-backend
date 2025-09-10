@@ -70,6 +70,7 @@ model AzureDatabaseInstance {
   skuName          String         @default("B_Standard_B1ms")
   username         String         @default("orchestronic_user")
   engine           Engine         @default(PostgreSQL)
+  terraformState   Json?
   resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
 }
 
@@ -80,6 +81,7 @@ model AzureStorageInstance {
   kind             String         @default("StorageV2")
   name             String         @default("storage-instance")
   sku              String         @default("Standard_LRS")
+  terraformState   Json?
   resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
 }
 
@@ -100,6 +102,7 @@ model AzureVMInstance {
   name             String
   os               String
   sizeId           String
+  terraformState   Json?
   size             AzureVMSize    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
   resourceConfigId String
   resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
@@ -112,6 +115,7 @@ model AwsVMInstance {
   keyName           String
   sgName            String
   resourceConfigId  String
+  terraformState    Json?
   ResourceConfig    ResourceConfig  @relation(fields: [resourceConfigId], references: [id])
   awsInstanceTypeId String
   AwsInstanceType   AwsInstanceType @relation(fields: [awsInstanceTypeId], references: [id])
@@ -126,6 +130,7 @@ model AwsDatabaseInstance {
   dbInstanceClass    AwsDatabaseType @relation(fields: [awsDatabaseTypeId], references: [id])
   dbAllocatedStorage Int
   engine             Engine
+  terraformState     Json?
   resourceConfigId   String
   resourceConfig     ResourceConfig  @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
 }
@@ -134,6 +139,7 @@ model AwsStorageInstance {
   id               String         @id @default(uuid())
   bucketName       String
   resourceConfigId String
+  terraformState   Json?
   resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
 }
 
