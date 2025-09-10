@@ -330,6 +330,10 @@ export class RequestService {
         },
       });
 
+      if (!request?.resourcesId) {
+        throw new Error(`No resourcesId found for request ${id}`);
+      }
+
       const result = await this.databaseService.resources.findFirst({
         where: { id: request?.resourcesId },
         select: {
@@ -338,6 +342,12 @@ export class RequestService {
       });
 
       const cloudProvider = result?.cloudProvider;
+
+      if (!cloudProvider) {
+        throw new Error(
+          `No cloudProvider found for resourcesId ${request?.resourcesId}`,
+        );
+      }
 
       if (cloudProvider == CloudProvider.AWS) {
         this.rabbitmqService.queueRequest(id.toString());
