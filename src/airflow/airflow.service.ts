@@ -31,6 +31,8 @@ export class AirflowService {
         );
 
         const resp = await firstValueFrom(response$);
+
+        // this.getTaskInstances(resp.data.dag_id, resp.data.dag_run_id);
         return resp.data;
       } catch (err: any) {
         console.log(err);
@@ -48,4 +50,20 @@ export class AirflowService {
       );
     }
   }
+
+  // @Sse('logs/:dagId/:dagRunId/:taskId/:tryNumber')
+  // streamLogs(
+  //   @Param('dagId') dagId: string,
+  //   @Param('dagRunId') dagRunId: string,
+  //   @Param('taskId') taskId: string,
+  //   @Param('tryNumber') tryNumber: number,
+  // ): Observable<MessageEvent> {
+  //   return interval(3000).pipe(
+  //     // poll every 3s
+  //     switchMap(async () =>
+  //       this.airflowService.getTaskLogs(dagId, dagRunId, taskId, tryNumber),
+  //     ),
+  //     map((log) => ({ data: log }) as MessageEvent),
+  //   );
+  // }
 }

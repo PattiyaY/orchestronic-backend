@@ -5,7 +5,6 @@ import {
   Delete,
   ForbiddenException,
   Get,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -15,20 +14,16 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { RequestService } from './request.service';
-import { Prisma, Status } from '@prisma/client';
+import { Status } from '@prisma/client';
 import { ApiBody, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { CreateAzureRequestDto } from './dto/create-request-azure.dto';
 import * as jwt from 'jsonwebtoken';
-import {
-  RequestStatus,
-  UpdateRequestStatusDto,
-} from './dto/request-status.dto';
+import { UpdateRequestStatusDto } from './dto/request-status.dto';
 import { BackendJwtPayload, RequestWithCookies } from '../lib/types';
 import { GetVmSizesDto } from './dto/get-vm-sizes.dto';
 import { PaginatedVmSizesDto } from './dto/paginated-vm-sizes.dto';
 import { UpdateFeedbackDto } from './dto/update-feedback.dto';
 import { GitlabService } from '../gitlab/gitlab.service';
-import { CreateAwsResourceDto } from 'src/resource/dto/create-aws-resource.dto';
 import { CreateAwsRequestDto } from './dto/create-request-aws.dto';
 
 @Controller('request')
@@ -197,13 +192,13 @@ export class RequestController {
     }
   }
 
-  @Patch(':id')
+  @Patch(':id/status')
   @ApiOperation({
-    summary: 'Update request information by request ID',
+    summary: 'Update request status by request ID',
   })
-  updateRequestInfo(
+  updateRequestStatus(
     @Param('id') id: string,
-    @Body() requestUpdate: Prisma.RequestUpdateInput,
+    @Body() { status }: UpdateRequestStatusDto,
     @Req() req: RequestWithCookies,
   ) {
     const token = req.cookies?.['access_token'];
@@ -219,60 +214,58 @@ export class RequestController {
     try {
       const decoded = jwt.verify(token, secret) as unknown;
       const payload = decoded as BackendJwtPayload;
-      return this.requestService.updateRequestInfo(payload, id, {
-        ...requestUpdate,
-      });
+      return this.requestService.updateRequestInfo(payload, id, status);
     } catch (err) {
       console.error('Request Controller: Error decoding token', err);
       throw new UnauthorizedException('Invalid token');
     }
   }
 
-  @Patch(':id/status')
-  @ApiOperation({
-    summary: 'Update request status by request ID',
-  })
-  async updateRequestStatus(
-    @Param('id') id: string,
-    @Body() { status }: UpdateRequestStatusDto,
-    @Req() req: RequestWithCookies,
-  ) {
-    const token = req.cookies?.['access_token'];
-    if (token === undefined) {
-      throw new UnauthorizedException('No access token');
-    }
+  // @Patch(':id/status')
+  // @ApiOperation({
+  //   summary: 'Update request status by request ID',
+  // })
+  // async updateRequestStatus(
+  //   @Param('id') id: string,
+  //   @Body() { status }: UpdateRequestStatusDto,
+  //   @Req() req: RequestWithCookies,
+  // ) {
+  //   const token = req.cookies?.['access_token'];
+  //   if (token === undefined) {
+  //     throw new UnauthorizedException('No access token');
+  //   }
 
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error('JWT_SECRET not defined');
-    }
+  //   const secret = process.env.JWT_SECRET;
+  //   if (!secret) {
+  //     throw new Error('JWT_SECRET not defined');
+  //   }
 
-    const decoded = jwt.verify(token, secret) as unknown;
-    const payload = decoded as BackendJwtPayload;
+  //   const decoded = jwt.verify(token, secret) as unknown;
+  //   const payload = decoded as BackendJwtPayload;
 
-    if (payload.role !== 'Admin' && payload.role !== 'IT') {
-      throw new ForbiddenException(
-        'You do not have permission to update status',
-      );
-    }
-    const updated = await this.requestService.updateRequestInfo(payload, id, {
-      status,
-    });
+  //   if (payload.role !== 'Admin' && payload.role !== 'IT') {
+  //     throw new ForbiddenException(
+  //       'You do not have permission to update status',
+  //     );
+  //   }
+  //   const updated = await this.requestService.updateRequestInfo(payload, id, {
+  //     status,
+  //   });
 
-    if (updated.status === RequestStatus.Approved) {
-      await this.gitlabService.createProject({
-        name: updated.repository.name,
-        description: updated.repository.description || '',
-        visibility: 'public',
-      });
-    }
+  //   if (updated.status === RequestStatus.Approved) {
+  //     await this.gitlabService.createProject({
+  //       name: updated.repository.name,
+  //       description: updated.repository.description || '',
+  //       visibility: 'public',
+  //     });
+  //   }
 
-    if (!updated) {
-      throw new NotFoundException(`Request with id ${id} not found`);
-    }
+  //   if (!updated) {
+  //     throw new NotFoundException(`Request with id ${id} not found`);
+  //   }
 
-    return updated;
-  }
+  //   return updated;
+  // }
 
   @Patch(':id/feedback')
   @ApiOperation({

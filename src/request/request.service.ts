@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, Status, Role, CloudProvider } from '@prisma/client';
+import { Status, Role, CloudProvider } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { CreateAzureRequestDto } from './dto/create-request-azure.dto';
 import { ApiBody } from '@nestjs/swagger';
@@ -13,8 +13,8 @@ import { BackendJwtPayload } from '../lib/types';
 import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
 import { AirflowService } from '../airflow/airflow.service';
 import { RequestStatus } from './dto/request-status.dto';
-import { CreateAwsResourceDto } from 'src/resource/dto/create-aws-resource.dto';
 import { CreateAwsRequestDto } from './dto/create-request-aws.dto';
+import { GitlabService } from 'src/gitlab/gitlab.service';
 
 @Injectable()
 export class RequestService {
@@ -22,6 +22,7 @@ export class RequestService {
     private readonly databaseService: DatabaseService,
     private readonly rabbitmqService: RabbitmqService,
     private readonly airflowService: AirflowService,
+    private readonly gitlabService: GitlabService,
   ) {}
 
   async findAll(user: BackendJwtPayload) {
@@ -311,18 +312,18 @@ export class RequestService {
   async updateRequestInfo(
     user: BackendJwtPayload,
     id: string,
-    updateData: Prisma.RequestUpdateInput,
+    status: RequestStatus,
   ) {
-    const updateStatus = this.databaseService.request.update({
+    const updateStatus = await this.databaseService.request.update({
       where: { id: id.toString() },
-      data: updateData,
+      data: { status },
       include: {
         repository: true,
       },
     });
 
     // TODO: Fetch data from DB to see how many resources of each type were requested
-    if (updateData.status === RequestStatus.Approved) {
+    if (updateStatus.status === RequestStatus.Approved) {
       const request = await this.databaseService.request.findFirst({
         where: { id: id.toString() },
         select: {
@@ -348,6 +349,21 @@ export class RequestService {
           `No cloudProvider found for resourcesId ${request?.resourcesId}`,
         );
       }
+
+      // Fetch the repository to get its name and description
+      const repository = await this.databaseService.repository.findUnique({
+        where: { id: updateStatus.repository.id },
+        select: {
+          name: true,
+          description: true,
+        },
+      });
+
+      await this.gitlabService.createProject({
+        name: repository?.name ?? '',
+        description: repository?.description ?? '',
+        visibility: 'public',
+      });
 
       if (cloudProvider == CloudProvider.AWS) {
         this.rabbitmqService.queueRequest(id.toString());
