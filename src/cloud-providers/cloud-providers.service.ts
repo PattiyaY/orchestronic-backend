@@ -36,7 +36,14 @@ export class CloudProvidersService {
       } = params;
 
       // 1️⃣ Fetch all items (or filter by search if you want)
-      let items = await this.databaseService.awsInstanceType.findMany({});
+      let items = await this.databaseService.awsInstanceType.findMany({
+        where: {
+          raw: {
+            path: ['ProcessorInfo', 'SupportedArchitectures'],
+            array_contains: 'x86_64',
+          },
+        },
+      });
 
       // 2️⃣ Filter in JS
       items = items.filter((item) => {

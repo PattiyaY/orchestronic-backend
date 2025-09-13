@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Status, Role, CloudProvider } from '@prisma/client';
+import { Status, Role, CloudProvider, RepositoryStatus } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { CreateAzureRequestDto } from './dto/create-request-azure.dto';
 import { ApiBody } from '@nestjs/swagger';
@@ -363,6 +363,13 @@ export class RequestService {
         name: repository?.name ?? '',
         description: repository?.description ?? '',
         visibility: 'public',
+      });
+
+      await this.databaseService.repository.update({
+        where: { id: updateStatus.repository.id },
+        data: {
+          status: RepositoryStatus.Created,
+        },
       });
 
       if (cloudProvider == CloudProvider.AWS) {
