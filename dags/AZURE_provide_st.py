@@ -1,7 +1,10 @@
 import ast
+import json
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
+from pathlib import Path
+
 from datetime import datetime
 import os
 from dotenv import load_dotenv
@@ -111,7 +114,7 @@ def fetch_from_database(**context):
         storage_list = []
 
         for storage_instance in storage_instances:
-            id_, resourceConfigId, access_tier, kind, name, sku_replication = storage_instance
+            id_, resourceConfigId, access_tier, kind, name, sku_replication, terraformState = storage_instance
             sku, replication = sku_replication.split("_", 1)
             storage_list.append({
                 "id": id_,
@@ -120,7 +123,7 @@ def fetch_from_database(**context):
                 "account_tier": sku,
                 "account_replication_type": replication,
                 "account_kind": kind,
-                "access_tier": access_tier
+                "access_tier": access_tier,
             })
 
         configInfo = {
@@ -268,6 +271,39 @@ output "storage_account_names" {{
     print(f"[x] Created {main_tf_file}")
     return main_tf_file
 
+def write_to_db(terraform_dir, configInfo):
+    import ast
+    configInfo = ast.literal_eval(configInfo)
+
+    st_output_file = Path(terraform_dir) / "st/terraform.tfstate"
+
+    if not st_output_file.exists():
+        raise FileNotFoundError(f"Terraform state file not found at {st_output_file}")
+
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
+
+    USER = os.getenv("DB_USER")
+    PASSWORD = os.getenv("DB_PASSWORD")
+    HOST = os.getenv("DB_HOST")
+    PORT = os.getenv("DB_PORT")
+    DBNAME = os.getenv("DB_NAME")
+    
+    connection = psycopg2.connect(
+        user=USER, password=PASSWORD,
+        host=HOST, port=PORT, dbname=DBNAME
+    )
+    with open(st_output_file, 'r') as f:
+        st_state = json.load(f)
+
+    cursor = connection.cursor()
+    cursor.execute(
+    'UPDATE "AwsVMInstance" SET "terraformState" = %s WHERE "resourceConfigId" = %s;',
+    (json.dumps(st_state), configInfo['resourcesId'])
+    )
+    connection.commit()
+    cursor.close()
+    connection.close()
+
 # -------------------------
 # DAG Definition
 # -------------------------
@@ -327,4 +363,13 @@ with DAG(
         bash_command="cd {{ ti.xcom_pull(task_ids='create_terraform_dir') }} && terraform apply -auto-approve",
     )
 
-    fetch_task >> create_dir_task >> write_files_task >> terraform_init >> terraform_apply
+    write_to_db_st = PythonOperator(
+        task_id="write_to_db",
+        python_callable=write_to_db,
+        op_args=[
+            "{{ ti.xcom_pull(task_ids='create_terraform_dir') }}",
+            "{{ ti.xcom_pull(task_ids='fetch_config') }}",
+        ],
+    )
+
+    fetch_task >> create_dir_task >> write_files_task >> terraform_init >> terraform_apply >> write_to_db_st

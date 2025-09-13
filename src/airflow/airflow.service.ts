@@ -19,7 +19,7 @@ export class AirflowService {
 
       try {
         const response$ = this.httpService.post(
-          `${process.env.AIRFLOW_BASE_URL ?? 'http://localhost:8080'}${path}`,
+          `${process.env.AIRFLOW_BASE_URL ?? 'http://localhost:8080/airflow'}${path}`,
           payload,
           {
             auth: {

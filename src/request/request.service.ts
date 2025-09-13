@@ -372,15 +372,15 @@ export class RequestService {
         },
       });
 
-      // if (cloudProvider == CloudProvider.AWS) {
-      //   this.rabbitmqService.queueRequest(id.toString());
-      //   this.airflowService.triggerDag(user, 'AWS_Resources');
-      // } else if (cloudProvider == CloudProvider.AZURE) {
-      //   this.rabbitmqService.queueRequest(id.toString());
-      //   this.airflowService.triggerDag(user, 'AZURE_Resource_Group');
-      // } else {
-      //   throw new Error(`Unsupported cloudProvider: ${cloudProvider}`);
-      // }
+      if (cloudProvider == CloudProvider.AWS) {
+        this.rabbitmqService.queueRequest(id.toString());
+        this.airflowService.triggerDag(user, 'AWS_Resources');
+      } else if (cloudProvider == CloudProvider.AZURE) {
+        this.rabbitmqService.queueRequest(id.toString());
+        this.airflowService.triggerDag(user, 'AZURE_Resource_Group');
+      } else {
+        throw new Error(`Unsupported cloudProvider: ${cloudProvider}`);
+      }
     }
     return updateStatus;
   }
