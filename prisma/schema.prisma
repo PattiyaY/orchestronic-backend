@@ -103,6 +103,7 @@ model AzureVMInstance {
   os               String
   sizeId           String
   terraformState   Json?
+  pem              String?
   size             AzureVMSize    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
   resourceConfigId String
   resourceConfig   ResourceConfig @relation(fields: [resourceConfigId], references: [id], onDelete: Cascade)
@@ -116,6 +117,7 @@ model AwsVMInstance {
   sgName            String
   resourceConfigId  String
   terraformState    Json?
+  pem               String?
   ResourceConfig    ResourceConfig  @relation(fields: [resourceConfigId], references: [id])
   awsInstanceTypeId String
   AwsInstanceType   AwsInstanceType @relation(fields: [awsInstanceTypeId], references: [id])

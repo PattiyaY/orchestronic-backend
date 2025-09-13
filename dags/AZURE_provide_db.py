@@ -303,10 +303,10 @@ def write_to_db(terraform_dir, configInfo):
     import ast
     configInfo = ast.literal_eval(configInfo)
 
-    db_output_file = Path(terraform_dir) / "db/terraform.tfstate"
+    vm_output_file = Path(terraform_dir) / "terraform.tfstate"
 
-    if not db_output_file.exists():
-        raise FileNotFoundError(f"Terraform state file not found at {db_output_file}")
+    if not vm_output_file.exists():
+        raise FileNotFoundError(f"Terraform state file not found at {vm_output_file}")
 
     load_dotenv(expanduser('/opt/airflow/dags/.env'))
 
@@ -320,13 +320,24 @@ def write_to_db(terraform_dir, configInfo):
         user=USER, password=PASSWORD,
         host=HOST, port=PORT, dbname=DBNAME
     )
-    with open(db_output_file, 'r') as f:
-        db_state = json.load(f)
-
     cursor = connection.cursor()
+    cursor.execute('''
+        SELECT "name", "region", "resourceConfigId"
+        FROM "Resources" WHERE id = %s;
+    ''', (configInfo['resourcesId'],))
+    resource = cursor.fetchone()
+    if not resource:
+        raise ValueError(f"No resource found for resourcesId={configInfo['resourcesId']}")
+
+    repoName, region, resourceConfigId = resource
+
+    with open(vm_output_file, 'r') as f:
+        vm_state = json.load(f)
+
+    print(vm_output_file, resourceConfigId)
     cursor.execute(
-    'UPDATE "AwsVMInstance" SET "terraformState" = %s WHERE "resourceConfigId" = %s;',
-    (json.dumps(db_state), configInfo['resourcesId'])
+    'UPDATE "AzureDatabaseInstance" SET "terraformState" = %s WHERE "resourceConfigId" = %s;',
+    (json.dumps(vm_state), resourceConfigId)
     )
     connection.commit()
     cursor.close()

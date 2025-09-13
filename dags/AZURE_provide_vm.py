@@ -88,7 +88,7 @@ def fetch_from_database(**context):
 
     vmSizes = []
     for vm in vmInstances:
-        size_id = vm[-2] # TODO(jan): Adding new column, make sure index is correct
+        size_id = vm[-3] # TODO(jan): Adding new column, make sure index is correct
         cursor.execute('SELECT "name" FROM "AzureVMSize" WHERE "id" = %s;', (size_id,))
         size = cursor.fetchone()
         vmSizes.append(size)
@@ -339,7 +339,7 @@ def write_to_db(terraform_dir, configInfo):
     import ast
     configInfo = ast.literal_eval(configInfo)
 
-    vm_output_file = Path(terraform_dir) / "vm/terraform.tfstate"
+    vm_output_file = Path(terraform_dir) / "terraform.tfstate"
 
     if not vm_output_file.exists():
         raise FileNotFoundError(f"Terraform state file not found at {vm_output_file}")
@@ -356,17 +356,47 @@ def write_to_db(terraform_dir, configInfo):
         user=USER, password=PASSWORD,
         host=HOST, port=PORT, dbname=DBNAME
     )
+    cursor = connection.cursor()
+    cursor.execute('''
+        SELECT "name", "region", "resourceConfigId"
+        FROM "Resources" WHERE id = %s;
+    ''', (configInfo['resourcesId'],))
+    resource = cursor.fetchone()
+    if not resource:
+        raise ValueError(f"No resource found for resourcesId={configInfo['resourcesId']}")
+
+    repoName, region, resourceConfigId = resource
+
     with open(vm_output_file, 'r') as f:
         vm_state = json.load(f)
+    
 
-    cursor = connection.cursor()
+    # Collect PEM files for each VM instance
+    pem_dict = {}
+    # Fetch VM instances for this resourceConfigId
+    cursor.execute('SELECT "id", "name" FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
+    vm_rows = cursor.fetchall()
+    for idx, (vm_id, vm_name) in enumerate(vm_rows, start=1):
+        pem_path = Path(terraform_dir) / f"{repoName}_{idx}.pem"
+        if pem_path.exists():
+            with open(pem_path, 'r') as f:
+                pem_dict[str(vm_id)] = f.read()
+        else:
+            pem_dict[str(vm_id)] = None
+
+
     cursor.execute(
-    'UPDATE "AwsVMInstance" SET "terraformState" = %s WHERE "resourceConfigId" = %s;',
-    (json.dumps(vm_state), configInfo['resourcesId'])
+        'UPDATE "AzureVMInstance" SET "terraformState" = %s WHERE "resourceConfigId" = %s;',
+        (json.dumps(vm_state), resourceConfigId)
+    )
+    cursor.execute(
+        'UPDATE "AzureVMInstance" SET "pem" = %s WHERE "resourceConfigId" = %s;',
+        (json.dumps(pem_dict), resourceConfigId)
     )
     connection.commit()
     cursor.close()
     connection.close()
+
 
 # -------------------------
 # DAG Definition

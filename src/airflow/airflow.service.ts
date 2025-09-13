@@ -51,19 +51,31 @@ export class AirflowService {
     }
   }
 
-  // @Sse('logs/:dagId/:dagRunId/:taskId/:tryNumber')
-  // streamLogs(
-  //   @Param('dagId') dagId: string,
-  //   @Param('dagRunId') dagRunId: string,
-  //   @Param('taskId') taskId: string,
-  //   @Param('tryNumber') tryNumber: number,
-  // ): Observable<MessageEvent> {
-  //   return interval(3000).pipe(
-  //     // poll every 3s
-  //     switchMap(async () =>
-  //       this.airflowService.getTaskLogs(dagId, dagRunId, taskId, tryNumber),
-  //     ),
-  //     map((log) => ({ data: log }) as MessageEvent),
-  //   );
-  // }
+  async getTaskLogs(
+    dagId: string,
+    dagRunId: string,
+    taskId: string,
+    tryNumber = 1,
+  ) {
+    const path = `/api/v1/dags/${encodeURIComponent(dagId)}/dagRuns/${encodeURIComponent(
+      dagRunId,
+    )}/taskInstances/${encodeURIComponent(taskId)}/logs/${tryNumber}`;
+
+    try {
+      const response$ = this.httpService.get(
+        `${process.env.AIRFLOW_BASE_URL ?? 'http://localhost:8080/airflow'}${path}`,
+        {
+          auth: {
+            username: process.env.AIRFLOW_USERNAME ?? 'airflow',
+            password: process.env.AIRFLOW_PASSWORD ?? 'airflow',
+          },
+        },
+      );
+      const resp = await firstValueFrom(response$);
+      return resp.data.content; // 'content' contains log text in Airflow 2.x
+    } catch (err: any) {
+      console.error(err);
+      return `Failed to fetch logs: ${err?.message ?? 'Unknown error'}`;
+    }
+  }
 }
