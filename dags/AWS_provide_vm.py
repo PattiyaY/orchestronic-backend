@@ -25,8 +25,9 @@ default_args = {
     'retries': 1,
 }
 
-def fetch_from_database(**context):
-    request_id = context['dag_run'].conf.get('request_id')
+def fetch_from_database():
+    # request_id = context['dag_run'].conf.get('request_id')
+    request_id = "7525e163-7268-4aeb-ab1d-48787100d2d9"
     if not request_id:
         raise ValueError("No message received. Stop DAG run.")
 
@@ -176,7 +177,7 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     secret_key           = "{os.getenv('AWS_SECRET_KEY')}"
     project_location     = "{config_dict['region']}"
     project_name         = "{projectName}"
-    vm_resources = {json.dumps(vm_resources, indent=4)}
+    vm_instances = {json.dumps(vm_resources, indent=4)}
     """
     with open(f"{terraform_dir}/terraform.auto.tfvars", "w") as f:
         f.write(tfvars_content)
@@ -197,12 +198,6 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     secret_key = var.secret_key
     }}
 
-    locals {{
-    common_tags = {{
-        Project = var.project_name
-    }}
-    }}
-
 
     data "aws_ami" "ubuntu2204" {{
     most_recent = true
@@ -217,12 +212,9 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     # VPC
     resource "aws_vpc" "vpc" {{
     cidr_block = "10.0.0.0/16"
-    tags = merge(
-        local.common_tags,
-        {{
-        Name = "var.project_name-vm"
+    tags = {{
+        Name = "${{var.project_name}}-vm"
         }}
-    )
     }}
 
     data "aws_availability_zones" "available" {{}}
@@ -233,23 +225,17 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     cidr_block              = "10.0.1.0/24"
     availability_zone       = data.aws_availability_zones.available.names[0]
     map_public_ip_on_launch = true
-    tags = merge(
-        local.common_tags,
-        {{
-        Name = "var.project_name-vm"
+    tags = {{
+        Name = "${{var.project_name}}-vm"
         }}
-    )
     }}
 
     # Internet Gateway
     resource "aws_internet_gateway" "igw" {{
     vpc_id = aws_vpc.vpc.id
-    tags = merge(
-        local.common_tags,
-        {{
-        Name = "var.project_name-vm"
+    tags = {{
+        Name = "${{var.project_name}}-vm"
         }}
-    )
     }}
 
     # Route Table
@@ -261,12 +247,9 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
         gateway_id = aws_internet_gateway.igw.id
     }}
 
-    tags = merge(
-        local.common_tags,
-        {{
-        Name = "var.project_name-vm"
+    tags = {{
+        Name = "${{var.project_name}}-vm"
         }}
-    )
     }}
 
     # Associate Route Table
@@ -302,7 +285,9 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
         cidr_blocks = ["0.0.0.0/0"]
     }}
 
-    tags       = local.common_tags
+    tags = {{
+        Name = "${{var.project_name}}-vm"
+        }}
     }}
 
     resource "aws_key_pair" "vm_key" {{
@@ -319,15 +304,15 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     vpc_security_group_ids = [aws_security_group.sg.id]
     key_name               = aws_key_pair.vm_key.key_name
 
-    tags = merge(local.common_tags, {{
-        Name = each.value.instance_name
-    }})
+    tags = {{
+        Name = "${{var.instance_name}}"
+        }}
     }}
 
 
     # Output the public IP
     output "public_ip" {{
-    value = aws_instance.vm.public_ip
+    value = {{ for name, inst in aws_instance.vm : name => inst.public_ip }}
     }}
     """
 
