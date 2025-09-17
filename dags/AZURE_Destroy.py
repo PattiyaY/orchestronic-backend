@@ -59,7 +59,7 @@ def cleanup_directory(request_id):
     PORT = os.getenv("DB_PORT")
     DBNAME = os.getenv("DB_NAME")
 
-    print(f"Connecting to database {DBNAME} at {HOST}:{PORT} as user {USER}")
+    # print(f"Connecting to database {DBNAME} at {HOST}:{PORT} as user {USER}")
 
     connection = psycopg2.connect(
         user=USER,
@@ -94,7 +94,7 @@ def cleanup_directory(request_id):
     if os.path.exists(directory_path):
         shutil.rmtree(directory_path)
 
-    cursor.execute('DELETE FROM "Request" WHERE id = %s;', (request_id))
+    cursor.execute('DELETE FROM "Request" WHERE id = %s;', (request_id,))
 
     return projectName
 
@@ -115,15 +115,16 @@ with DAG(
 
     # Step 2 : Clean up Dir
     cleanup_dir = PythonOperator(
-        task_id="cleanup_directory",
+        task_id="cleanup_dir",
         python_callable=cleanup_directory,
+        op_args=["{{ ti.xcom_pull(task_ids='get_request_id') }}"],
     )
 
     # Step 3 : Terraform Destroy
     terraform_destroy = BashOperator(
-        task_id='cleanup_directory',
+        task_id='terraform_destroy',
         bash_command='terraform init && terraform destroy -auto-approve',
-        cwd="/opt/airflow/dags/terraform/rg-{{ ti.xcom_pull(task_ids='cleanup_directory') | trim | replace('\"', '') }}",
+        cwd="/opt/airflow/dags/terraform/rg-{{ ti.xcom_pull(task_ids='cleanup_dir') | trim | replace('\"', '') }}",
         env={
             "ARM_SUBSCRIPTION_ID": os.getenv("AZURE_SUBSCRIPTION_ID"),
             "ARM_CLIENT_ID": os.getenv("AZURE_CLIENT_ID"),
@@ -134,3 +135,5 @@ with DAG(
         retry_delay=timedelta(minutes=5),
         do_xcom_push=True
     )
+
+get_request_id >> cleanup_dir >> terraform_destroy

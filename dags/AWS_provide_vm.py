@@ -39,7 +39,7 @@ def fetch_from_database(**context):
     PORT = os.getenv("DB_PORT")
     DBNAME = os.getenv("DB_NAME")
 
-    print(f"Connecting to database {DBNAME} at {HOST}:{PORT} as user {USER}")
+    # print(f"Connecting to database {DBNAME} at {HOST}:{PORT} as user {USER}")
 
     connection = psycopg2.connect(
         user=USER,
@@ -89,7 +89,7 @@ def fetch_from_database(**context):
     vm_instances = cursor.fetchall()
     if not vm_instances:
         raise ValueError(f"No VM instance found for resourceConfigId={resourceConfigId}")
-    print(f"VM Instances: {vm_instances}")
+    # print(f"VM Instances: {vm_instances}")
     # Shared values
     key_name = vm_instances[0][2]
     sg_name = vm_instances[0][3]
@@ -134,7 +134,7 @@ def create_terraform_directory(configInfo):
     projectName = configInfo['project_name']
     terraform_dir = f"/opt/airflow/dags/terraform/{projectName}/vm"
     os.makedirs(terraform_dir, exist_ok=True)
-    print(f"[x] Created directory {terraform_dir}")
+    # print(f"[x] Created directory {terraform_dir}")
     return terraform_dir
 
 def generate_ssh_key(terraform_dir, repo_name):
@@ -356,7 +356,7 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     with open(f"{terraform_dir}/variables.tf", "w") as f:
         f.write(variables_tf)
     
-    print(f"[x] Created Terraform files in {terraform_dir}")
+    # print(f"[x] Created Terraform files in {terraform_dir}")
 
 def write_to_db(terraform_dir, configInfo):
     import ast
