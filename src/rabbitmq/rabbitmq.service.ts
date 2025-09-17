@@ -3,13 +3,23 @@ import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class RabbitmqService {
-  constructor(@Inject('RABBITMQ_SERVICE') private rabbitClient: ClientProxy) {}
+  constructor(
+    @Inject('RABBITMQ_SERVICE_1') private rabbitClient1: ClientProxy,
+    @Inject('RABBITMQ_SERVICE_2') private rabbitClient2: ClientProxy,
+  ) {}
 
   queueRequest(requestId: string) {
-    this.rabbitClient.emit('request', { requestId });
-    console.log(`Request ID sent to RabbitMQ: ${requestId}`);
+    this.rabbitClient1.emit('request', { requestId });
+    console.log(`(Queue) Request ID sent to RabbitMQ: ${requestId}`);
 
-    return { message: 'Request queued successfully', requestId };
+    return { message: 'Queue Request queued successfully', requestId };
+  }
+
+  destroyRequest(requestId: string) {
+    this.rabbitClient2.emit('destroy', { requestId });
+    console.log(`(Destroy) Request ID sent to RabbitMQ: ${requestId}`);
+
+    return { message: 'Destroy Request queued successfully', requestId };
   }
 
   // async getRequest() {

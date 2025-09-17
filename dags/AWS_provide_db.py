@@ -256,7 +256,7 @@ resource "aws_db_subnet_group" "db_subnet" {{
 # ===============================
 # RDS Database Instance
 # ===============================
-resource "aws_db_instance" "my_db" {{
+resource "aws_db_instance" "db" {{
   for_each              = {{ for db in var.db_resources : db.db_name => db }}
   identifier             = each.value.db_name
   engine                 = each.value.engine
@@ -295,6 +295,12 @@ output "db_port" {{
     variable "secret_key" {{
     default = "{os.getenv('AWS_SECRET_KEY')}"
     }}
+
+    variable "project_name" {{
+    type        = string
+    description = "Project name"
+    }}
+
 
     variable "project_location" {{
     default = "{config_dict['region']}"

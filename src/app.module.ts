@@ -51,11 +51,19 @@ import { InfrastructureModule } from './infrastructure/infrastructure.module';
 
     ClientsModule.register([
       {
-        name: 'RABBITMQ_SERVICE',
+        name: 'RABBITMQ_SERVICE_1',
         transport: Transport.RMQ,
         options: {
           urls: ['amqp://localhost:5672'],
           queue: 'request',
+        },
+      },
+      {
+        name: 'RABBITMQ_SERVICE_2',
+        transport: Transport.RMQ,
+        options: {
+          urls: ['amqp://localhost:5672'],
+          queue: 'destroy',
         },
       },
     ]),

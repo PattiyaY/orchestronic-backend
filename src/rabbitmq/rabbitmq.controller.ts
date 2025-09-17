@@ -22,4 +22,12 @@ export class RabbitmqController {
   queueRequest(@Body() requestDto: RequestDto) {
     return this.queueService.queueRequest(requestDto.requestId);
   }
+
+  @Post('destroy')
+  @ApiOperation({
+    summary: 'Queue a new request',
+  })
+  destroyRequest(@Body() requestDto: RequestDto) {
+    return this.queueService.destroyRequest(requestDto.requestId);
+  }
 }

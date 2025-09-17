@@ -25,9 +25,8 @@ default_args = {
     'retries': 1,
 }
 
-def fetch_from_database():
-    # request_id = context['dag_run'].conf.get('request_id')
-    request_id = "7525e163-7268-4aeb-ab1d-48787100d2d9"
+def fetch_from_database(**context):
+    request_id = context['dag_run'].conf.get('request_id')
     if not request_id:
         raise ValueError("No message received. Stop DAG run.")
 
@@ -305,7 +304,7 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     key_name               = aws_key_pair.vm_key.key_name
 
     tags = {{
-        Name = "${{var.instance_name}}"
+        Name = each.value.instance_name
         }}
     }}
 

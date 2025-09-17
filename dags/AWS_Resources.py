@@ -4,7 +4,7 @@ import ast
 import pika
 import psycopg2
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.operators.bash import BashOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.operators.empty import EmptyOperator
@@ -77,15 +77,15 @@ def fetch_from_database(request_id):
     cursor = connection.cursor()
 
     # Get resourcesId from Request
-    cursor.execute('SELECT "resourcesId" FROM "Request" WHERE id = %s;', (request_id,))
+    cursor.execute('SELECT "resourcesId", "repositoryId" FROM "Request" WHERE id = %s;', (request_id,))
     res = cursor.fetchone()
     if not res:
         raise ValueError(f"No request found for id={request_id}")
-    resourcesId = res[0]
+    resourcesId, repositoryId = res
 
     # Get resource data
     cursor.execute(
-        '''SELECT "name", "region", "cloudProvider", "resourceConfigId"
+        '''SELECT "region", "cloudProvider", "resourceConfigId"
            FROM "Resources"
            WHERE id = %s;''',
         (resourcesId,)
@@ -94,7 +94,17 @@ def fetch_from_database(request_id):
     if not resource:
         raise ValueError(f"No resource found for resourcesId={resourcesId}")
 
-    repoName, region, cloudProvider, resourceConfigId = resource
+    region, cloudProvider, resourceConfigId = resource
+
+    # ProjectName
+    cursor.execute(
+        'SELECT "name" FROM "Repository" WHERE id = %s;',
+        (repositoryId,)
+    )
+    row = cursor.fetchone()
+    if not row:
+        raise ValueError(f"No repository found for id={repositoryId}")
+    projectName = row[0]
 
     # Count VM OR DB OR ST instances
     cursor.execute(
@@ -123,7 +133,7 @@ def fetch_from_database(request_id):
 
     configInfo = {
         "resourcesId": resourcesId,
-        "repoName": repoName,
+        "projectName": projectName,
         "region": region,
         "cloudProvider": cloudProvider,
         "vmCount": vm_count,
@@ -138,7 +148,7 @@ def fetch_from_database(request_id):
 # -------------------------
 def create_terraform_directory(configInfo):
     config_dict = json.loads(configInfo)
-    projectName = config_dict['repoName']
+    projectName = config_dict['projectName']
     terraform_dir = f"/opt/airflow/dags/terraform/{projectName}"
     os.makedirs(terraform_dir, exist_ok=True)
     print(f"[x] Created directory {terraform_dir}")
@@ -147,24 +157,32 @@ def create_terraform_directory(configInfo):
 # -------------------------
 # Step 4: Trigger VM or ST or DB
 # -------------------------
-def checkVMSTDB(configInfo, resourceType):
-    print(configInfo)
-    vmCount = json.loads(configInfo).get('vmCount', 0)
-    dbCount = json.loads(configInfo).get('dbCount', 0)
-    stCount = json.loads(configInfo).get('stCount', 0)
+# def checkVMSTDB(configInfo, resourceType):
+#     print(configInfo)
+#     vmCount = json.loads(configInfo).get('vmCount', 0)
+#     dbCount = json.loads(configInfo).get('dbCount', 0)
+#     stCount = json.loads(configInfo).get('stCount', 0)
 
-    if resourceType == 'VM':
-        if vmCount > 0:
-            return True
-    if resourceType == 'DB':
-        if dbCount > 0:
-            return True
-    if resourceType == 'ST':
-        if stCount > 0:
-            return True
-    return False
+#     if resourceType == 'VM' and vmCount > 0:
+#         return True
+#     if resourceType == 'DB' and dbCount > 0:
+#         return True
+#     if resourceType == 'ST' and stCount > 0:
+#         return True
+#     return False
 
-
+def branch_resources(configInfo):
+    data = json.loads(configInfo)
+    branches = []
+    if data['vmCount'] > 0:
+        branches.append('trigger_vm')
+    if data['dbCount'] > 0:
+        branches.append('trigger_db')
+    if data['stCount'] > 0:
+        branches.append('trigger_st')
+    if not branches:
+        return 'end'
+    return branches
 # -------------------------
 # Airflow DAG
 # -------------------------
@@ -195,25 +213,30 @@ with DAG(
         python_callable=lambda ti: create_terraform_directory(ti.xcom_pull(task_ids="get_config_info")),
     )
 
-    # check VM
-    check_vm = PythonOperator(
-        task_id="check_vm",
-        python_callable=lambda ti: checkVMSTDB(ti.xcom_pull(task_ids="get_config_info"), 'VM'),
-        provide_context=True
-    )
+    # # check VM
+    # check_vm = PythonOperator(
+    #     task_id="check_vm",
+    #     python_callable=lambda ti: checkVMSTDB(ti.xcom_pull(task_ids="get_config_info"), 'VM'),
+    #     provide_context=True
+    # )
 
-    #check DB
-    check_db = PythonOperator(
-        task_id="check_db",
-        python_callable=lambda ti: checkVMSTDB(ti.xcom_pull(task_ids="get_config_info"), 'DB'),
-        provide_context=True
-    )
+    # #check DB
+    # check_db = PythonOperator(
+    #     task_id="check_db",
+    #     python_callable=lambda ti: checkVMSTDB(ti.xcom_pull(task_ids="get_config_info"), 'DB'),
+    #     provide_context=True
+    # )
 
-    #check ST
-    check_st = PythonOperator(
-        task_id="check_st",
-        python_callable=lambda ti: checkVMSTDB(ti.xcom_pull(task_ids="get_config_info"), 'ST'),
-        provide_context=True
+    # #check ST
+    # check_st = PythonOperator(
+    #     task_id="check_st",
+    #     python_callable=lambda ti: checkVMSTDB(ti.xcom_pull(task_ids="get_config_info"), 'ST'),
+    #     provide_context=True
+    # )
+
+    branch_task = BranchPythonOperator(
+        task_id='branch_resources',
+        python_callable=lambda ti: branch_resources(ti.xcom_pull(task_ids='get_config_info'))
     )
 
     # Trigger VM DAG
@@ -243,11 +266,13 @@ with DAG(
         trigger_rule='all_success',
     )
 
-    end = EmptyOperator(task_id="end")
+    end = EmptyOperator(task_id="end", trigger_rule="none_failed_min_one_success")
 
     # Workflow
-    get_request_id >> get_config_info >> create_tf_dir >> [check_vm, check_db, check_st]
-    check_vm >> trigger_vm
-    check_db >> trigger_db
-    check_st >> trigger_st
-    [trigger_vm, trigger_db, trigger_st] >> end
+    # get_request_id >> get_config_info >> create_tf_dir >> [check_vm, check_db, check_st]
+    # check_vm >> trigger_vm
+    # check_db >> trigger_db
+    # check_st >> trigger_st
+    # [trigger_vm, trigger_db, trigger_st] >> end
+
+    get_request_id >> get_config_info >> create_tf_dir >> branch_task >> [trigger_vm, trigger_db, trigger_st] >> end
