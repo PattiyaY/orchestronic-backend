@@ -397,7 +397,7 @@ def write_to_db(terraform_dir, configInfo):
         'UPDATE "AwsVMInstance" SET "terraformState" = %s WHERE "resourceConfigId" = %s;',
         (json.dumps(vm_state), resourceConfigId)
     )
-    vmInstances = configInfo["vmInstances"]
+    vmInstances = configInfo["vm_instances"]
     for i in range(len(vmInstances)):
         pem_path = Path(terraform_dir) / f"{repoName}_{i+1}.pem"
         if pem_path.exists():
