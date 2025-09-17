@@ -51,15 +51,8 @@ export class AirflowService {
     }
   }
 
-  async getTaskLogs(
-    dagId: string,
-    dagRunId: string,
-    taskId: string,
-    tryNumber = 1,
-  ) {
-    const path = `/api/v1/dags/${encodeURIComponent(dagId)}/dagRuns/${encodeURIComponent(
-      dagRunId,
-    )}/taskInstances/${encodeURIComponent(taskId)}/logs/${tryNumber}`;
+  async getTaskInstances(dagId: string, dagRunId: string) {
+    const path = `/api/v1/dags/${dagId}/dagRuns/${dagRunId}/taskInstances`;
 
     try {
       const response$ = this.httpService.get(
@@ -69,13 +62,48 @@ export class AirflowService {
             username: process.env.AIRFLOW_USERNAME ?? 'airflow',
             password: process.env.AIRFLOW_PASSWORD ?? 'airflow',
           },
+          headers: { 'Content-Type': 'application/json' },
         },
       );
+
       const resp = await firstValueFrom(response$);
-      return resp.data.content; // 'content' contains log text in Airflow 2.x
+      return resp.data.task_instances;
     } catch (err: any) {
-      console.error(err);
-      return `Failed to fetch logs: ${err?.message ?? 'Unknown error'}`;
+      throw new HttpException(
+        {
+          message: 'Failed to fetch task instances',
+          details: err?.response?.data ?? err?.message ?? 'Unknown error',
+        },
+        err?.response?.status ?? HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
+
+  async getTaskLogs(
+    dagId: string,
+    dagRunId: string,
+    taskId: string,
+    tryNumber = 1,
+  ) {
+    const path = `/api/v1/dags/${dagId}/dagRuns/${dagRunId}/taskInstances/${taskId}/logs/${tryNumber}`;
+    console.log(path);
+
+    try {
+      const response$ = this.httpService.get(
+        `${process.env.AIRFLOW_BASE_URL ?? 'http://localhost:8080/airflow'}${path}`,
+        {
+          auth: {
+            username: process.env.AIRFLOW_USERNAME ?? 'airflow',
+            password: process.env.AIRFLOW_PASSWORD ?? 'airflow',
+          },
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+
+      const resp = await firstValueFrom(response$);
+      return resp.data?.content ?? resp.data;
+    } catch (err: any) {
+      return `Error fetching logs for task ${taskId}: ${err?.message ?? 'Unknown error'}`;
     }
   }
 }

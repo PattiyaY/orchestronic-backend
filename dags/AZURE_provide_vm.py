@@ -369,30 +369,21 @@ def write_to_db(terraform_dir, configInfo):
 
     with open(vm_output_file, 'r') as f:
         vm_state = json.load(f)
-    
-
-    # Collect PEM files for each VM instance
-    pem_dict = {}
-    # Fetch VM instances for this resourceConfigId
-    cursor.execute('SELECT "id", "name" FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
-    vm_rows = cursor.fetchall()
-    for idx, (vm_id, vm_name) in enumerate(vm_rows, start=1):
-        pem_path = Path(terraform_dir) / f"{repoName}_{idx}.pem"
-        if pem_path.exists():
-            with open(pem_path, 'r') as f:
-                pem_dict[str(vm_id)] = f.read()
-        else:
-            pem_dict[str(vm_id)] = None
-
 
     cursor.execute(
         'UPDATE "AzureVMInstance" SET "terraformState" = %s WHERE "resourceConfigId" = %s;',
         (json.dumps(vm_state), resourceConfigId)
     )
-    cursor.execute(
-        'UPDATE "AzureVMInstance" SET "pem" = %s WHERE "resourceConfigId" = %s;',
-        (json.dumps(pem_dict), resourceConfigId)
-    )
+    vmInstances = configInfo["vmInstances"]
+    for i in range(len(vmInstances)):
+        pem_path = Path(terraform_dir) / f"{repoName}_{i+1}.pem"
+        if pem_path.exists():
+            with open(pem_path, 'r') as f:
+                pem_content = f.read()
+                cursor.execute(
+                    'UPDATE "AzureVMInstance" SET "pem" = %s WHERE "id" = %s;',
+                    (pem_content, configInfo["vmInstances"][i][0])
+                )
     connection.commit()
     cursor.close()
     connection.close()

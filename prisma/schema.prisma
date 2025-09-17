@@ -8,6 +8,20 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Airflow {
+  id            String    @id @default(uuid())
+  dagId         String    @unique
+  dagRunId      String    @unique
+  status        String
+  executionDate DateTime
+  startDate     DateTime?
+  endDate       DateTime?
+  conf          Json?
+  lastUpdated   DateTime  @updatedAt
+  createdAt     DateTime  @default(now())
+  Request       Request?
+}
+
 model Request {
   id           String     @id @default(uuid())
   status       Status     @default(Pending)
@@ -22,6 +36,8 @@ model Request {
   owner        User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
   resources    Resources  @relation(fields: [resourcesId], references: [id], onDelete: Cascade)
+  airflowId    String     @unique
+  airflow      Airflow    @relation(fields: [airflowId], references: [id], onDelete: Cascade)
 }
 
 model Repository {

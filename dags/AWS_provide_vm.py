@@ -358,6 +358,61 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     
     print(f"[x] Created Terraform files in {terraform_dir}")
 
+def write_to_db(terraform_dir, configInfo):
+    import ast
+    configInfo = ast.literal_eval(configInfo)
+
+    vm_output_file = Path(terraform_dir) / "terraform.tfstate"
+
+    if not vm_output_file.exists():
+        raise FileNotFoundError(f"Terraform state file not found at {vm_output_file}")
+
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
+
+    USER = os.getenv("DB_USER")
+    PASSWORD = os.getenv("DB_PASSWORD")
+    HOST = os.getenv("DB_HOST")
+    PORT = os.getenv("DB_PORT")
+    DBNAME = os.getenv("DB_NAME")
+    
+    connection = psycopg2.connect(
+        user=USER, password=PASSWORD,
+        host=HOST, port=PORT, dbname=DBNAME
+    )
+    cursor = connection.cursor()
+    cursor.execute('''
+        SELECT "name", "region", "resourceConfigId"
+        FROM "Resources" WHERE id = %s;
+    ''', (configInfo['resourcesId'],))
+    resource = cursor.fetchone()
+    if not resource:
+        raise ValueError(f"No resource found for resourcesId={configInfo['resourcesId']}")
+
+    repoName, region, resourceConfigId = resource
+
+    with open(vm_output_file, 'r') as f:
+        vm_state = json.load(f)
+
+
+    cursor.execute(
+        'UPDATE "AwsVMInstance" SET "terraformState" = %s WHERE "resourceConfigId" = %s;',
+        (json.dumps(vm_state), resourceConfigId)
+    )
+    vmInstances = configInfo["vmInstances"]
+
+    for i in range(len(vmInstances)):
+        pem_path = Path(terraform_dir) / f"{repoName}_{i+1}.pem"
+        if pem_path.exists():
+            with open(pem_path, 'r') as f:
+                pem_content = f.read()
+                cursor.execute(
+                    'UPDATE "AwsVMInstance" SET "pem" = %s WHERE "id" = %s;',
+                    (pem_content, configInfo["vmInstances"][i][0])
+                )
+    connection.commit()
+    cursor.close()
+    connection.close()
+
 with DAG(
     'AWS_terraform_vm_provision',
     default_args=default_args,
@@ -405,4 +460,13 @@ with DAG(
         bash_command="cd {{ ti.xcom_pull(task_ids='create_terraform_dir') }} && terraform apply -auto-approve",
     )
 
-    fetch_task >> create_dir_task >> generate_ssh_task >> write_files_task >> terraform_init >> terraform_apply
+    write_to_db_vm = PythonOperator(
+        task_id="write_to_db",
+        python_callable=write_to_db,
+        op_args=[
+            "{{ ti.xcom_pull(task_ids='create_terraform_dir') }}",
+            "{{ ti.xcom_pull(task_ids='fetch_config') }}",
+        ],
+    )
+
+    fetch_task >> create_dir_task >> generate_ssh_task >> write_files_task >> terraform_init >> terraform_apply >> write_to_db_vm

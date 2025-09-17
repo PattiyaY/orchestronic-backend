@@ -32,8 +32,6 @@ def rabbitmq_consumer():
     if not rabbit_url:
         raise ValueError("RABBITMQ_URL is not set in .env")
 
-    print(rabbit_url)
-
     connection = pika.BlockingConnection(pika.URLParameters(rabbit_url))
     channel = connection.channel()
 
