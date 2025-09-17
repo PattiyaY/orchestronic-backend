@@ -25,9 +25,9 @@ default_args = {
     'retries': 1,
 }
 
-def fetch_from_database():
-    # request_id = context['dag_run'].conf.get('request_id')
-    request_id = "6dca83a9-048f-4cfe-a81a-2f8bfa163097"
+def fetch_from_database(**context):
+    request_id = context['dag_run'].conf.get('request_id')
+    # request_id = "6dca83a9-048f-4cfe-a81a-2f8bfa163097"
     if not request_id:
         raise ValueError("No message received. Stop DAG run.")
 
@@ -103,6 +103,7 @@ def fetch_from_database():
     connection.close()
 
     configInfo = {
+        "resourcesId": resourcesId, 
         "project_name": projectName,
         "region": region,
         "st_instances": instances_list,

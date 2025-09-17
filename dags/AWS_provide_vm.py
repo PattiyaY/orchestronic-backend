@@ -117,6 +117,7 @@ def fetch_from_database(**context):
     connection.close()
 
     configInfo = {
+        "resourcesId": resourcesId, 
         "project_name": projectName,
         "sg_name": sg_name,
         "key_name": key_name,
@@ -304,7 +305,7 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     key_name               = aws_key_pair.vm_key.key_name
 
     tags = {{
-        Name = each.value.instance_name
+        Name = "${{var.instance_name}}"
         }}
     }}
 
@@ -392,13 +393,11 @@ def write_to_db(terraform_dir, configInfo):
     with open(vm_output_file, 'r') as f:
         vm_state = json.load(f)
 
-
     cursor.execute(
         'UPDATE "AwsVMInstance" SET "terraformState" = %s WHERE "resourceConfigId" = %s;',
         (json.dumps(vm_state), resourceConfigId)
     )
     vmInstances = configInfo["vmInstances"]
-
     for i in range(len(vmInstances)):
         pem_path = Path(terraform_dir) / f"{repoName}_{i+1}.pem"
         if pem_path.exists():
