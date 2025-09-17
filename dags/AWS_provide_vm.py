@@ -25,9 +25,9 @@ default_args = {
     'retries': 1,
 }
 
-def fetch_from_database():
-    # request_id = context['dag_run'].conf.get('request_id')
-    request_id = "7525e163-7268-4aeb-ab1d-48787100d2d9"
+def fetch_from_database(**context):
+    request_id = context['dag_run'].conf.get('request_id')
+    # request_id = "7525e163-7268-4aeb-ab1d-48787100d2d9"
     if not request_id:
         raise ValueError("No message received. Stop DAG run.")
 
@@ -118,6 +118,7 @@ def fetch_from_database():
     connection.close()
 
     configInfo = {
+        "resourcesId": resourcesId, 
         "project_name": projectName,
         "sg_name": sg_name,
         "key_name": key_name,
@@ -305,7 +306,7 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     key_name               = aws_key_pair.vm_key.key_name
 
     tags = {{
-        Name = "${{var.instance_name}}"
+        Name = "${{each.value.instance_name}}"
         }}
     }}
 
@@ -393,13 +394,11 @@ def write_to_db(terraform_dir, configInfo):
     with open(vm_output_file, 'r') as f:
         vm_state = json.load(f)
 
-
     cursor.execute(
         'UPDATE "AwsVMInstance" SET "terraformState" = %s WHERE "resourceConfigId" = %s;',
         (json.dumps(vm_state), resourceConfigId)
     )
     vmInstances = configInfo["vmInstances"]
-
     for i in range(len(vmInstances)):
         pem_path = Path(terraform_dir) / f"{repoName}_{i+1}.pem"
         if pem_path.exists():

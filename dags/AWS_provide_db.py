@@ -118,6 +118,7 @@ def fetch_from_database(**context):
     connection.close()
 
     configInfo = {
+        "resourcesId": resourcesId, 
         "project_name": projectName,
         "region": region,
         "db_instances": instance_list
