@@ -25,8 +25,9 @@ default_args = {
     'retries': 1,
 }
 
-def fetch_from_database(**context):
-    request_id = context['dag_run'].conf.get('request_id')
+def fetch_from_database():
+    # request_id = context['dag_run'].conf.get('request_id')
+    request_id = "5e780561-8ad8-4d9e-9218-6a03f33b99b7"
     if not request_id:
         raise ValueError("No message received. Stop DAG run.")
 
@@ -82,7 +83,7 @@ def fetch_from_database(**context):
 
     # awsInstanceType, instanceName, keyName, sgName
     cursor.execute(
-        'SELECT "awsInstanceTypeId", "instanceName", "keyName", "sgName" '
+        'SELECT "id", "awsInstanceTypeId", "instanceName", "keyName", "sgName" '
         'FROM "AwsVMInstance" WHERE "resourceConfigId" = %s;',
         (resourceConfigId,)
     )
@@ -96,7 +97,7 @@ def fetch_from_database(**context):
 
     instance_list = []
     for vm in vm_instances:
-        awsInstanceTypeId, instanceName, keyName, sgName = vm
+        id, awsInstanceTypeId, instanceName, keyName, sgName = vm
         cursor.execute(
             'SELECT "name" FROM "AwsInstanceType" WHERE id = %s;',
             (awsInstanceTypeId,)
@@ -107,6 +108,7 @@ def fetch_from_database(**context):
         instanceType = row[0]
 
         instance_list.append({
+            "id": id,
             "instance_name": instanceName,
             "instance_type": instanceType,
             "key_name": keyName,
@@ -119,8 +121,6 @@ def fetch_from_database(**context):
     configInfo = {
         "resourcesId": resourcesId, 
         "project_name": projectName,
-        "sg_name": sg_name,
-        "key_name": key_name,
         "region": "ap-southeast-1",
         "vm_instances": instance_list
     }
@@ -137,27 +137,34 @@ def create_terraform_directory(configInfo):
     # print(f"[x] Created directory {terraform_dir}")
     return terraform_dir
 
-def generate_ssh_key(terraform_dir, repo_name):
-    private_key_path = Path(terraform_dir) / f"{repo_name}.pem"
-    public_key_path = Path(terraform_dir) / f"{repo_name}.pub"
+def generate_ssh_key(terraform_dir, configInfo):
+    import ast
+    return_data = []
+    configInfo = ast.literal_eval(configInfo)
+    repo_name = configInfo['project_name']
 
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+    for i in range(1, len(configInfo['vm_instances'])+1):
+        private_key_path = Path(terraform_dir) / f"{repo_name}_{i}.pem"
+        public_key_path = Path(terraform_dir) / f"{repo_name}_{i}.pub"
 
-    with open(private_key_path, "wb") as f:
-        f.write(private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()
-        ))
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=4096)
 
-    public_key = private_key.public_key()
-    with open(public_key_path, "wb") as f:
-        f.write(public_key.public_bytes(
-            encoding=serialization.Encoding.OpenSSH,
-            format=serialization.PublicFormat.OpenSSH
-        ))
+        with open(private_key_path, "wb") as f:
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
 
-    return str(public_key_path)
+        public_key = private_key.public_key()
+        with open(public_key_path, "wb") as f:
+            f.write(public_key.public_bytes(
+                encoding=serialization.Encoding.OpenSSH,
+                format=serialization.PublicFormat.OpenSSH
+            ))
+        return_data.append(str(public_key_path))
+
+    return return_data
 
 def write_terraform_files(terraform_dir, configInfo, public_key_path):
     if isinstance(configInfo, str):
@@ -166,9 +173,7 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
         
     config_dict = configInfo
     projectName = f"{config_dict['project_name']}"
-    vm_resources = config_dict['vm_instances']
-    key_name = config_dict['key_name']
-    sg_name = config_dict['sg_name']
+    vm_instances = config_dict['vm_instances']
 
     load_dotenv(expanduser('/opt/airflow/dags/.env'))
      # terraform.auto.tfvars
@@ -177,7 +182,7 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     secret_key           = "{os.getenv('AWS_SECRET_KEY')}"
     project_location     = "{config_dict['region']}"
     project_name         = "{projectName}"
-    vm_instances = {json.dumps(vm_resources, indent=4)}
+    vm_instances = {json.dumps(vm_instances, indent=4)}
     """
     with open(f"{terraform_dir}/terraform.auto.tfvars", "w") as f:
         f.write(tfvars_content)
@@ -260,7 +265,8 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
 
     # Security Group
     resource "aws_security_group" "sg" {{
-    name        = "{sg_name}"
+    for_each = {{ for vm in var.vm_instances : vm.id => vm }}
+    name = each.value.sg_name
     description = "Allow SSH and HTTP"
     vpc_id      = aws_vpc.vpc.id
 
@@ -285,24 +291,24 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
         cidr_blocks = ["0.0.0.0/0"]
     }}
 
-    tags = {{
-        Name = "${{var.project_name}}-vm"
-        }}
+    tags = {{ Name = "${{var.project_name}}-${{each.key}}" }}
     }}
 
     resource "aws_key_pair" "vm_key" {{
-    key_name   = "{key_name}"
-    public_key = file(var.ssh_public_key_path)
+    for_each = {{ for vm in var.vm_instances : vm.id => vm }}
+
+    key_name   = each.value.key_name
+    public_key = file(var.ssh_public_key_path[each.key])
     }}
 
+
     resource "aws_instance" "vm" {{
-    for_each               = {{for vm in var.vm_instances : vm.instance_name => vm }}
+    for_each = {{ for vm in var.vm_instances : vm.id => vm }}
     ami                    = data.aws_ami.ubuntu2204.id
     instance_type          = each.value.instance_type
     subnet_id              = aws_subnet.subnet.id
-    # Each VM can use its own SG if needed
-    vpc_security_group_ids = [aws_security_group.sg.id]
-    key_name               = aws_key_pair.vm_key.key_name
+    vpc_security_group_ids = [aws_security_group.sg[each.key].id]
+    key_name = aws_key_pair.vm_key[each.key].key_name
 
     tags = {{
         Name = each.value.instance_name
@@ -320,6 +326,10 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
         f.write(main_tf_content)
     
     load_dotenv(expanduser('/opt/airflow/dags/.env'))
+    import ast
+    public_key_path = ast.literal_eval(public_key_path)
+    
+    ssh_key_map = {vm['id']: key for vm, key in zip(vm_instances, public_key_path)}
 
     variables_tf = f"""
     variable "access_key" {{
@@ -335,7 +345,7 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
     }}
 
     variable "ssh_public_key_path" {{
-    default = "{public_key_path}"
+    default = {json.dumps(ssh_key_map, indent=4)}
     }}
 
     variable "project_name" {{
@@ -345,6 +355,7 @@ def write_terraform_files(terraform_dir, configInfo, public_key_path):
    variable "vm_instances" {{
     description = "List of VM configs"
     type = list(object({{
+        id = string
         instance_name = string
         instance_type = string
         key_name      = string
@@ -434,7 +445,7 @@ with DAG(
         python_callable=generate_ssh_key,
         op_args=[
             "{{ ti.xcom_pull(task_ids='create_terraform_dir') }}",
-            "{{ ti.xcom_pull(task_ids='fetch_config')['project_name'] }}",
+            "{{ ti.xcom_pull(task_ids='fetch_config') }}",
         ],
     )
 

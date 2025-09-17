@@ -456,6 +456,7 @@ export class RequestService {
     return this.databaseService.request.delete({
       where: { id: id },
     });
+    // return this.rabbitmqService.destroyRequest(id);
   }
 
   async getVmSizes() {
