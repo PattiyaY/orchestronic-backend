@@ -25,7 +25,7 @@ export class RabbitmqController {
 
   @Post('destroy')
   @ApiOperation({
-    summary: 'Queue a new request',
+    summary: 'Queue a new destroy request',
   })
   destroyRequest(@Body() requestDto: RequestDto) {
     return this.queueService.destroyRequest(requestDto.requestId);

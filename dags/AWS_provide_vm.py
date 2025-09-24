@@ -27,7 +27,6 @@ default_args = {
 
 def fetch_from_database(**context):
     request_id = context['dag_run'].conf.get('request_id')
-    # request_id = "5e780561-8ad8-4d9e-9218-6a03f33b99b7"
     if not request_id:
         raise ValueError("No message received. Stop DAG run.")
 
