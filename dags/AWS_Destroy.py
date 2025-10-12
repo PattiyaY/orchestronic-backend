@@ -127,12 +127,12 @@ def supabase_delete_request(request_id):
         connection.commit()
         print(f"Deleted repository with id={repositoryId}")
 
-        # GET ResourcesConfigId, CloudProvider
-        cursor.execute('SELECT "resourcesConfigId" FROM "Resources" WHERE id = %s;', (resourcesId,))
+        # GET resourceConfigId, CloudProvider
+        cursor.execute('SELECT "resourceConfigId" FROM "Resources" WHERE id = %s;', (resourcesId,))
         res = cursor.fetchone()
         if not res:
             raise ValueError(f"No resources found for id={resourcesId}")
-        resourcesConfigId = res
+        resourceConfigId = res
 
         # Delete resources record
         cursor.execute('DELETE FROM "Resources" WHERE id = %s;', (resourcesId,))
@@ -141,28 +141,28 @@ def supabase_delete_request(request_id):
 
         # Delete resources
         # AWS VM Instance
-        cursor.execute('SELECT * FROM "AwsVMInstance" WHERE id = %s;', (resourcesConfigId,))
+        cursor.execute('SELECT * FROM "AwsVMInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
         res = cursor.fetchall()
         if res:
-            cursor.execute('DELETE FROM "AwsVMInstance" WHERE id = %s;', (resourcesConfigId,))
+            cursor.execute('DELETE FROM "AwsVMInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
             connection.commit()
-            print(f"Deleted AwsVMInstance with id={resourcesConfigId}")
+            print(f"Deleted AwsVMInstance with id={resourceConfigId}")
 
         # AWS Database Instance
-        cursor.execute('SELECT * FROM "AwsDatabaseInstance" WHERE id = %s;', (resourcesConfigId,))
+        cursor.execute('SELECT * FROM "AwsDatabaseInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
         res = cursor.fetchall()
         if res:
-            cursor.execute('DELETE FROM "AwsDatabaseInstance" WHERE id = %s;', (resourcesConfigId,))
+            cursor.execute('DELETE FROM "AwsDatabaseInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
             connection.commit()
-            print(f"Deleted AwsDatabaseInstance with id={resourcesConfigId}")
+            print(f"Deleted AwsDatabaseInstance with id={resourceConfigId}")
     
         # AWS Storage Instance
-        cursor.execute('SELECT * FROM "AwsStorageInstance" WHERE id = %s;', (resourcesConfigId,))
+        cursor.execute('SELECT * FROM "AwsStorageInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
         res = cursor.fetchall()
         if res:
-            cursor.execute('DELETE FROM "AwsStorageInstance" WHERE id = %s;', (resourcesConfigId,))
+            cursor.execute('DELETE FROM "AwsStorageInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
             connection.commit()
-            print(f"Deleted AwsStorageInstance with id={resourcesConfigId}")
+            print(f"Deleted AwsStorageInstance with id={resourceConfigId}")
 
     finally:
         cursor.close()
@@ -206,21 +206,21 @@ def branch_resources(request_id):
         
         # Count VM OR DB OR ST instances
         cursor.execute(
-            '''SELECT id FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;''',
+            '''SELECT id FROM "AwsVMInstance" WHERE "resourceConfigId" = %s;''',
             (resourceConfigId,)
         )
         vm_instances = cursor.fetchall()
         vm_count = len(vm_instances)
 
         cursor.execute(
-            '''SELECT id FROM "AzureDatabaseInstance" WHERE "resourceConfigId" = %s;''',
+            '''SELECT id FROM "AwsDatabaseInstance" WHERE "resourceConfigId" = %s;''',
             (resourceConfigId,)
         )
         db_instances = cursor.fetchall()
         db_count = len(db_instances)
 
         cursor.execute(
-            '''SELECT id FROM "AzureStorageInstance" WHERE "resourceConfigId" = %s;''',
+            '''SELECT id FROM "AwsStorageInstance" WHERE "resourceConfigId" = %s;''',
             (resourceConfigId,)
         )
         st_instances = cursor.fetchall()
@@ -315,6 +315,8 @@ with DAG(
         task_id='branch_resources',
         python_callable=branch_resources,
         op_args=["{{ ti.xcom_pull(task_ids='get_request_id') }}"],
+        retries=3,
+        retry_delay=timedelta(minutes=5)
     )
 
     # Cleanup folder
@@ -331,6 +333,8 @@ with DAG(
         python_callable=supabase_delete_request,
         op_args=["{{ ti.xcom_pull(task_ids='get_request_id') }}"],
         trigger_rule='all_done',
+        retries=3,
+        retry_delay=timedelta(minutes=5)
     )
 
     get_request_id >> get_repository_name >> branch_task>> [destroy_ec2, destroy_rds, destroy_s3] >> cleanup_dir >> delete_request
