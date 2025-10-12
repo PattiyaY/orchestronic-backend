@@ -157,6 +157,8 @@ def write_terraform_db_files(terraform_dir, configInfo):
             return [to_map(instances, keys)]
 
     database_resources = ensure_list(config_dict.get("databaseInstance"), db_keys)
+    for db in database_resources:
+        db["name"] = f"{db['name']}-{db['resourceConfigId'][:4]}"
     load_dotenv(expanduser('/opt/airflow/dags/.env'))
 
     # -------------------------

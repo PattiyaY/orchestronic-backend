@@ -4,11 +4,12 @@ import pika
 import psycopg2
 import shutil
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from os.path import expanduser
+load_dotenv(expanduser('/opt/airflow/dags/.env'))
 
 # -------------------------
 # Default DAG args
@@ -90,6 +91,156 @@ def cleanup_directory(projectName):
         shutil.rmtree(directory_path)
     return projectName
 
+def supabase_delete_request(request_id):
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
+
+    USER = os.getenv("DB_USER")
+    PASSWORD = os.getenv("DB_PASSWORD")
+    HOST = os.getenv("DB_HOST")
+    PORT = os.getenv("DB_PORT")
+    DBNAME = os.getenv("DB_NAME")
+
+    connection = psycopg2.connect(
+        user=USER,
+        password=PASSWORD,
+        host=HOST,
+        port=PORT,
+        dbname=DBNAME,
+    )
+    cursor = connection.cursor()
+    try:
+        # GET repositoryId, resourcesId
+        cursor.execute('SELECT "repositoryId", "resourcesId" FROM "Request" WHERE id = %s;', (request_id,))
+        res = cursor.fetchone()
+        if not res:
+            raise ValueError(f"No request found for id={request_id}")
+        repositoryId, resourcesId = res
+
+        # Delete request record
+        cursor.execute('DELETE FROM "Request" WHERE id = %s;', (request_id,))
+        connection.commit()
+        print(f"Deleted request with id={request_id}")
+
+        # Delete repository record
+        cursor.execute('DELETE FROM "Repository" WHERE id = %s;', (repositoryId,))
+        connection.commit()
+        print(f"Deleted repository with id={repositoryId}")
+
+        # GET ResourcesConfigId, CloudProvider
+        cursor.execute('SELECT "resourceConfigId" FROM "Resources" WHERE id = %s;', (resourcesId,))
+        res = cursor.fetchone()
+        if not res:
+            raise ValueError(f"No resources found for id={resourcesId}")
+        resourcesConfigId = res
+
+        # Delete resources record
+        cursor.execute('DELETE FROM "Resources" WHERE id = %s;', (resourcesId,))
+        connection.commit()
+        print(f"Deleted resources with id={resourcesId}")
+
+        # Delete resources
+        # Azure VM Instance
+        cursor.execute('SELECT * FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+        res = cursor.fetchall()
+        if res:
+            cursor.execute('DELETE FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+            connection.commit()
+            print(f"Deleted AzureVMInstance with id={resourcesConfigId}")
+        
+        # Azure Database Instance
+        cursor.execute('SELECT * FROM "AzureDatabaseInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+        res = cursor.fetchall()
+        if res:
+            cursor.execute('DELETE FROM "AzureDatabaseInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+            connection.commit()
+            print(f"Deleted AzureDatabaseInstance with id={resourcesConfigId}")
+
+        # Azure Storage Instance
+        cursor.execute('SELECT * FROM "AzureStorageInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+        res = cursor.fetchall()
+        if res:
+            cursor.execute('DELETE FROM "AzureStorageInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+            connection.commit()
+            print(f"Deleted AzureStorageInstance with id={resourcesConfigId}")
+    finally:
+        cursor.close()
+        connection.close()
+
+def branch_resources(request_id):
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
+
+    USER = os.getenv("DB_USER")
+    PASSWORD = os.getenv("DB_PASSWORD")
+    HOST = os.getenv("DB_HOST")
+    PORT = os.getenv("DB_PORT")
+    DBNAME = os.getenv("DB_NAME")
+
+    connection = psycopg2.connect(
+        user=USER,
+        password=PASSWORD,
+        host=HOST,
+        port=PORT,
+        dbname=DBNAME,
+    )
+    cursor = connection.cursor()
+    try:
+        cursor.execute('SELECT "resourcesId" FROM "Request" WHERE id = %s;', (request_id,))
+        res = cursor.fetchone()
+        if not res:
+            raise ValueError(f"No request found for id={request_id}")
+        resourcesId = res[0]
+
+        cursor.execute(
+        '''SELECT "resourceConfigId"
+           FROM "Resources"
+           WHERE id = %s;''',
+        (resourcesId,)
+        )
+        resource = cursor.fetchone()
+        if not resource:
+            raise ValueError(f"No resource found for resourcesId={resourcesId}")
+
+        resourceConfigId = resource[0]
+        
+        # Count VM OR DB OR ST instances
+        cursor.execute(
+            '''SELECT id FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;''',
+            (resourceConfigId,)
+        )
+        vm_instances = cursor.fetchall()
+        vm_count = len(vm_instances)
+
+        cursor.execute(
+            '''SELECT id FROM "AzureDatabaseInstance" WHERE "resourceConfigId" = %s;''',
+            (resourceConfigId,)
+        )
+        db_instances = cursor.fetchall()
+        db_count = len(db_instances)
+
+        cursor.execute(
+            '''SELECT id FROM "AzureStorageInstance" WHERE "resourceConfigId" = %s;''',
+            (resourceConfigId,)
+        )
+        st_instances = cursor.fetchall()
+        st_count = len(st_instances)
+
+        cursor.close()
+        connection.close()
+
+        branches = []
+        if vm_count > 0:
+            branches.append('terraform_destroy_vm')
+        if db_count > 0:
+            branches.append('terraform_destroy_db')
+        if st_count > 0:
+            branches.append('terraform_destroy_st')
+        if not branches:
+            return 'end'
+    finally:
+        cursor.close()
+        connection.close()
+    return branches
+
 # -------------------------
 # DAG Definition
 # -------------------------
@@ -107,82 +258,107 @@ with DAG(
         python_callable=rabbitmq_consumer,
     )
 
-    # Step 2: Get repository/project name
+    # Step 2: Get repository / project name
     get_repository_name = PythonOperator(
         task_id="get_repository_name",
         python_callable=repository_name,
         op_args=["{{ ti.xcom_pull(task_ids='get_request_id') }}"],
     )
-
-    remove_locks = BashOperator(
-    task_id="remove_rg_locks",
-    bash_command=(
-        'RG_NAME="rg-{{ ti.xcom_pull(task_ids=\'get_repository_name\') | trim | replace(\'"\',\'\') }}"; '
-        'echo "Checking for locks on RG: $RG_NAME"; '
-        'locks=$(az lock list --resource-group $RG_NAME --query "[].{name:name,id:id}" -o tsv); '
-        'if [ -z "$locks" ]; then '
-        '  echo "No locks on RG $RG_NAME"; '
-        'else '
-        '  echo "Found locks:"; echo "$locks"; '
-        '  while read lockName lockId; do '
-        '    echo "Deleting lock $lockName (id $lockId)"; '
-        '    az lock delete --ids "$lockId"; '
-        '  done <<< "$locks"; '
-        'fi'
-    ),
-    env={
-                "ARM_SUBSCRIPTION_ID": "2dc6fdaa-24a9-47d2-9d0c-a40db11f90f4",
-                "ARM_CLIENT_ID": "261e7add-e11f-4531-8f72-ea459ebc38",
-                "ARM_CLIENT_SECRET": "-xu8Q~mHtELRMqrK0gz_vOKKtXfTfUgfe6A~Fb_l",
-                "ARM_TENANT_ID": "c1f3dc23-b7f8-48d3-9b5d-2b12f158f01f",
-            },
-    retries=2,
-    retry_delay=timedelta(minutes=2),
-    )
     
     # Step 3: Terraform destroy subfolders safely
-    destroy_tasks = []
-    subfolders = ["db", "st", "vm"]
+    destroy_vm = BashOperator(
+    task_id="terraform_destroy_vm",
+    bash_command=(
+        'cd "/opt/airflow/dags/terraform/rg-{{ ti.xcom_pull(task_ids=\'get_repository_name\') | trim | replace(\'"\',\'\') }}/vm" && '
+        'terraform init && terraform destroy -auto-approve'
+    ),
+    env={
+        "ARM_SUBSCRIPTION_ID": os.getenv("AZURE_SUBSCRIPTION_ID"),
+        "ARM_CLIENT_ID": os.getenv("AZURE_CLIENT_ID"),
+        "ARM_CLIENT_SECRET": os.getenv("AZURE_CLIENT_SECRET"),
+        "ARM_TENANT_ID": os.getenv("AZURE_TENANT_ID"),
+    },
+    retries=3,
+    retry_delay=timedelta(minutes=5)
+    )
 
-    for sub in subfolders:
-        task = BashOperator(
-            task_id=f"terraform_destroy_{sub}",
-            bash_command=(
-                'cd "/opt/airflow/dags/terraform/rg-{{ ti.xcom_pull(task_ids=\'get_repository_name\') | trim | replace(\'"\',\'\') }}/' + sub + '" && '
-                'terraform init && terraform destroy -auto-approve'
-            ),
-            env={
-                "ARM_SUBSCRIPTION_ID": "2dc6fdaa-24a9-47d2-9d0c-a40db11f90f4",
-                "ARM_CLIENT_ID": "261e7add-e11f-4531-8f72-ea459ebc38",
-                "ARM_CLIENT_SECRET": "-xu8Q~mHtELRMqrK0gz_vOKKtXfTfUgfe6A~Fb_l",
-                "ARM_TENANT_ID": "c1f3dc23-b7f8-48d3-9b5d-2b12f158f01f",
-            },
-            retries=3,
-            retry_delay=timedelta(minutes=5)
-        )
-    destroy_tasks.append(task)
+    destroy_db = BashOperator(
+        task_id="terraform_destroy_db",
+        bash_command=(
+            'cd "/opt/airflow/dags/terraform/rg-{{ ti.xcom_pull(task_ids=\'get_repository_name\') | trim | replace(\'"\',\'\') }}/db" && '
+            'terraform init && terraform destroy -auto-approve'
+        ),
+        env={
+            "ARM_SUBSCRIPTION_ID": os.getenv("AZURE_SUBSCRIPTION_ID"),
+            "ARM_CLIENT_ID": os.getenv("AZURE_CLIENT_ID"),
+            "ARM_CLIENT_SECRET": os.getenv("AZURE_CLIENT_SECRET"),
+            "ARM_TENANT_ID": os.getenv("AZURE_TENANT_ID"),
+        },
+        retries=3,
+        retry_delay=timedelta(minutes=5)
+    )
 
+    destroy_st = BashOperator(
+        task_id="terraform_destroy_st",
+        bash_command=(
+            'cd "/opt/airflow/dags/terraform/rg-{{ ti.xcom_pull(task_ids=\'get_repository_name\') | trim | replace(\'"\',\'\') }}/st" && '
+            'terraform init && terraform destroy -auto-approve'
+        ),
+        env={
+            "ARM_SUBSCRIPTION_ID": os.getenv("AZURE_SUBSCRIPTION_ID"),
+            "ARM_CLIENT_ID": os.getenv("AZURE_CLIENT_ID"),
+            "ARM_CLIENT_SECRET": os.getenv("AZURE_CLIENT_SECRET"),
+            "ARM_TENANT_ID": os.getenv("AZURE_TENANT_ID"),
+        },
+        retries=3,
+        retry_delay=timedelta(minutes=5)
+    )
+
+    destroy_rg = BashOperator(
+        task_id="terraform_destroy_rg",
+        bash_command=(
+            'cd "/opt/airflow/dags/terraform/rg-{{ ti.xcom_pull(task_ids=\'get_repository_name\') | trim | replace(\'"\',\'\') }}/rg" && '
+            'terraform init && terraform destroy -auto-approve'
+        ),
+        env={
+            "ARM_SUBSCRIPTION_ID": os.getenv("AZURE_SUBSCRIPTION_ID"),
+            "ARM_CLIENT_ID": os.getenv("AZURE_CLIENT_ID"),
+            "ARM_CLIENT_SECRET": os.getenv("AZURE_CLIENT_SECRET"),
+            "ARM_TENANT_ID": os.getenv("AZURE_TENANT_ID"),
+        },
+        trigger_rule='none_failed_min_one_success',
+        retries=3,
+        retry_delay=timedelta(minutes=5)
+    )
 
     # Step 4: Cleanup folder
     cleanup_dir = PythonOperator(
         task_id="cleanup_dir",
         python_callable=cleanup_directory,
         op_args=["{{ ti.xcom_pull(task_ids='get_repository_name') }}"],
+        trigger_rule='all_done'
     )
 
-    # Step 5: Delete DB record via Prisma
-    delete_request_prisma = BashOperator(
-        task_id='delete_request_prisma',
-        bash_command='node /opt/airflow/dags/deleteRequest.js {{ ti.xcom_pull(task_ids="get_request_id") }}',
+    branch_task = BranchPythonOperator(
+        task_id='branch_resources',
+        python_callable=branch_resources,
+        op_args=["{{ ti.xcom_pull(task_ids='get_request_id') }}"],
+    )
+
+    # Delete DB record
+    delete_request = PythonOperator(
+        task_id='supabase_delete_request',
+        python_callable=supabase_delete_request,
+        op_args=["{{ ti.xcom_pull(task_ids='get_request_id') }}"],
+        trigger_rule='all_done',
+        retries=3,
+        retry_delay=timedelta(minutes=5)
     )
 
     # -------------------------
     # Task dependencies
     # -------------------------
-    get_request_id >> get_repository_name >> remove_locks
-    for task in destroy_tasks:
-      get_repository_name >> task >> cleanup_dir 
-    cleanup_dir >> delete_request_prisma
+    get_request_id >> get_repository_name >> branch_task >> [destroy_vm, destroy_db, destroy_st] >> destroy_rg >> cleanup_dir >> delete_request
 
 
 

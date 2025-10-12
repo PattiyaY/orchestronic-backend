@@ -4,7 +4,7 @@ import pika
 import psycopg2
 import shutil
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator,BranchPythonOperator
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -92,6 +92,156 @@ def cleanup_directory(projectName):
         shutil.rmtree(directory_path)
     return projectName
 
+def supabase_delete_request(request_id):
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
+
+    USER = os.getenv("DB_USER")
+    PASSWORD = os.getenv("DB_PASSWORD")
+    HOST = os.getenv("DB_HOST")
+    PORT = os.getenv("DB_PORT")
+    DBNAME = os.getenv("DB_NAME")
+
+    connection = psycopg2.connect(
+        user=USER,
+        password=PASSWORD,
+        host=HOST,
+        port=PORT,
+        dbname=DBNAME,
+    )
+    cursor = connection.cursor()
+    try:
+        # GET repositoryId, resourcesId
+        cursor.execute('SELECT "repositoryId", "resourcesId" FROM "Request" WHERE id = %s;', (request_id,))
+        res = cursor.fetchone()
+        if not res:
+            raise ValueError(f"No request found for id={request_id}")
+        repositoryId, resourcesId = res
+
+        # Delete request record
+        cursor.execute('DELETE FROM "Request" WHERE id = %s;', (request_id,))
+        connection.commit()
+        print(f"Deleted request with id={request_id}")
+
+        # Delete repository record
+        cursor.execute('DELETE FROM "Repository" WHERE id = %s;', (repositoryId,))
+        connection.commit()
+        print(f"Deleted repository with id={repositoryId}")
+
+        # GET ResourcesConfigId, CloudProvider
+        cursor.execute('SELECT "resourcesConfigId" FROM "Resources" WHERE id = %s;', (resourcesId,))
+        res = cursor.fetchone()
+        if not res:
+            raise ValueError(f"No resources found for id={resourcesId}")
+        resourcesConfigId = res
+
+        # Delete resources record
+        cursor.execute('DELETE FROM "Resources" WHERE id = %s;', (resourcesId,))
+        connection.commit()
+        print(f"Deleted resources with id={resourcesId}")
+
+        # Delete resources
+        # AWS VM Instance
+        cursor.execute('SELECT * FROM "AwsVMInstance" WHERE id = %s;', (resourcesConfigId,))
+        res = cursor.fetchall()
+        if res:
+            cursor.execute('DELETE FROM "AwsVMInstance" WHERE id = %s;', (resourcesConfigId,))
+            connection.commit()
+            print(f"Deleted AwsVMInstance with id={resourcesConfigId}")
+
+        # AWS Database Instance
+        cursor.execute('SELECT * FROM "AwsDatabaseInstance" WHERE id = %s;', (resourcesConfigId,))
+        res = cursor.fetchall()
+        if res:
+            cursor.execute('DELETE FROM "AwsDatabaseInstance" WHERE id = %s;', (resourcesConfigId,))
+            connection.commit()
+            print(f"Deleted AwsDatabaseInstance with id={resourcesConfigId}")
+    
+        # AWS Storage Instance
+        cursor.execute('SELECT * FROM "AwsStorageInstance" WHERE id = %s;', (resourcesConfigId,))
+        res = cursor.fetchall()
+        if res:
+            cursor.execute('DELETE FROM "AwsStorageInstance" WHERE id = %s;', (resourcesConfigId,))
+            connection.commit()
+            print(f"Deleted AwsStorageInstance with id={resourcesConfigId}")
+
+    finally:
+        cursor.close()
+        connection.close()
+
+def branch_resources(request_id):
+    load_dotenv(expanduser('/opt/airflow/dags/.env'))
+
+    USER = os.getenv("DB_USER")
+    PASSWORD = os.getenv("DB_PASSWORD")
+    HOST = os.getenv("DB_HOST")
+    PORT = os.getenv("DB_PORT")
+    DBNAME = os.getenv("DB_NAME")
+
+    connection = psycopg2.connect(
+        user=USER,
+        password=PASSWORD,
+        host=HOST,
+        port=PORT,
+        dbname=DBNAME,
+    )
+    cursor = connection.cursor()
+    try:
+        cursor.execute('SELECT "resourcesId" FROM "Request" WHERE id = %s;', (request_id,))
+        res = cursor.fetchone()
+        if not res:
+            raise ValueError(f"No request found for id={request_id}")
+        resourcesId = res[0]
+
+        cursor.execute(
+        '''SELECT "resourceConfigId"
+           FROM "Resources"
+           WHERE id = %s;''',
+        (resourcesId,)
+        )
+        resource = cursor.fetchone()
+        if not resource:
+            raise ValueError(f"No resource found for resourcesId={resourcesId}")
+
+        resourceConfigId = resource[0]
+        
+        # Count VM OR DB OR ST instances
+        cursor.execute(
+            '''SELECT id FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;''',
+            (resourceConfigId,)
+        )
+        vm_instances = cursor.fetchall()
+        vm_count = len(vm_instances)
+
+        cursor.execute(
+            '''SELECT id FROM "AzureDatabaseInstance" WHERE "resourceConfigId" = %s;''',
+            (resourceConfigId,)
+        )
+        db_instances = cursor.fetchall()
+        db_count = len(db_instances)
+
+        cursor.execute(
+            '''SELECT id FROM "AzureStorageInstance" WHERE "resourceConfigId" = %s;''',
+            (resourceConfigId,)
+        )
+        st_instances = cursor.fetchall()
+        st_count = len(st_instances)
+
+        cursor.close()
+        connection.close()
+
+        branches = []
+        if vm_count > 0:
+            branches.append('terraform_destroy_ec2')
+        if db_count > 0:
+            branches.append('terraform_destroy_rds')
+        if st_count > 0:
+            branches.append('terraform_destroy_s3')
+        if not branches:
+            return 'end'
+    finally:
+        cursor.close()
+        connection.close()
+    return branches
 # -------------------------
 # DAG Definition
 # -------------------------
@@ -161,19 +311,28 @@ with DAG(
         retry_delay=timedelta(minutes=5)
     )
 
+    branch_task = BranchPythonOperator(
+        task_id='branch_resources',
+        python_callable=branch_resources,
+        op_args=["{{ ti.xcom_pull(task_ids='get_request_id') }}"],
+    )
+
     # Cleanup folder
     cleanup_dir = PythonOperator(
         task_id="cleanup_dir",
         python_callable=cleanup_directory,
         op_args=["{{ ti.xcom_pull(task_ids='get_repository_name') }}"],
+        trigger_rule='none_failed_min_one_success',
     )
 
-    # Delete DB record via Prisma
-    delete_request_prisma = BashOperator(
-        task_id='delete_request_prisma',
-        bash_command='node /opt/airflow/dags/deleteRequest.js {{ ti.xcom_pull(task_ids="get_request_id") }}',
+    # Delete DB record
+    delete_request = PythonOperator(
+        task_id='supabase_delete_request',
+        python_callable=supabase_delete_request,
+        op_args=["{{ ti.xcom_pull(task_ids='get_request_id') }}"],
+        trigger_rule='all_done',
     )
 
-    get_request_id >> get_repository_name >> [destroy_ec2, destroy_rds, destroy_s3] >> cleanup_dir >> delete_request_prisma
+    get_request_id >> get_repository_name >> branch_task>> [destroy_ec2, destroy_rds, destroy_s3] >> cleanup_dir >> delete_request
 
 

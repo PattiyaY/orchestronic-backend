@@ -6,10 +6,14 @@ import {
   Patch,
   Param,
   Delete,
+  UnauthorizedException,
+  Req,
 } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
 import { InfrastructureService } from './infrastructure.service';
 import { CreateInfrastructureDto } from './dto/create-infrastructure.dto';
 import { UpdateInfrastructureDto } from './dto/update-infrastructure.dto';
+import { BackendJwtPayload, RequestWithCookies } from 'src/lib/types';
 
 @Controller('infrastructure')
 export class InfrastructureController {
@@ -36,6 +40,29 @@ export class InfrastructureController {
     @Body() updateInfrastructureDto: UpdateInfrastructureDto,
   ) {
     return this.infrastructureService.update(+id, updateInfrastructureDto);
+  }
+
+  @Delete(':id/infra-destroy')
+  azureDestroy(@Param('id') id: string, @Req() req: RequestWithCookies) {
+    // console.log('Infrastructure Controller: infra-destroy called, id=', id);
+    const token = req.cookies?.['access_token'];
+    if (token === undefined) {
+      throw new UnauthorizedException('No access token');
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not defined');
+    }
+
+    try {
+      const decoded = jwt.verify(token, secret) as unknown;
+      const payload = decoded as BackendJwtPayload;
+      return this.infrastructureService.infrastrutureDestroy(payload, id);
+    } catch (err) {
+      console.error('Request Controller: Error decoding token', err);
+      throw new UnauthorizedException('Invalid token');
+    }
   }
 
   @Delete(':id')

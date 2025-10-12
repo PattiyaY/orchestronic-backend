@@ -2,10 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { CreateInfrastructureDto } from './dto/create-infrastructure.dto';
 import { UpdateInfrastructureDto } from './dto/update-infrastructure.dto';
 import { DatabaseService } from 'src/database/database.service';
+import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
+import { AirflowService } from '../airflow/airflow.service';
+import { CloudProvider } from '@prisma/client';
+import { BackendJwtPayload } from 'src/lib/types';
 
 @Injectable()
 export class InfrastructureService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly rabbitmqService: RabbitmqService,
+    private readonly airflowService: AirflowService,
+  ) {}
 
   create(createInfrastructureDto: CreateInfrastructureDto) {
     return 'This action adds a new infrastructure';
@@ -78,6 +86,46 @@ export class InfrastructureService {
 
   update(id: number, updateInfrastructureDto: UpdateInfrastructureDto) {
     return `This action updates a #${id} infrastructure`;
+  }
+
+  async infrastrutureDestroy(user: BackendJwtPayload, id: string) {
+    const request = await this.databaseService.request.findFirst({
+      where: { id: id },
+      select: {
+        resourcesId: true,
+      },
+    });
+
+    if (!request?.resourcesId) {
+      throw new Error(`No resourcesId found for request ${id}`);
+    }
+
+    const result = await this.databaseService.resources.findFirst({
+      where: { id: request?.resourcesId },
+      select: {
+        cloudProvider: true,
+      },
+    });
+
+    const cloudProvider = result?.cloudProvider;
+
+    if (!cloudProvider) {
+      throw new Error(
+        `No cloudProvider found for resourcesId ${request?.resourcesId}`,
+      );
+    }
+
+    if (cloudProvider === CloudProvider.AWS) {
+      this.rabbitmqService.destroyRequest(id.toString());
+      this.airflowService.triggerDag(user, 'AWS_Destroy');
+    } else if (cloudProvider == CloudProvider.AZURE) {
+      this.rabbitmqService.destroyRequest(id.toString());
+      this.airflowService.triggerDag(user, 'AZURE_Destroy');
+    } else {
+      throw new Error(`Unsupported cloudProvider: ${cloudProvider}`);
+    }
+
+    return `This action destroys ${cloudProvider} resources for request #${id}`;
   }
 
   remove(id: number) {
