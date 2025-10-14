@@ -35,11 +35,34 @@ export class InfrastructureService {
     });
 
     // Resource groups
-    const totalResourceGroups = await this.databaseService.resources.count();
+    const totalResourceGroupsAWS = await this.databaseService.resources.count({
+      where: {
+        cloudProvider: CloudProvider.AWS,
+        request: { status: 'Approved' },
+      },
+    });
+    const totalResourceGroupsAzure = await this.databaseService.resources.count(
+      {
+        where: {
+          cloudProvider: CloudProvider.AZURE,
+          request: { status: 'Approved' },
+        },
+      },
+    );
 
     // VM summary
-    const totalAzureVMs = await this.databaseService.azureVMInstance.count();
-    const totalAwsVMs = await this.databaseService.awsVMInstance.count();
+    const totalAzureVMs = await this.databaseService.request.count({
+      where: {
+        status: 'Approved',
+        resources: { cloudProvider: CloudProvider.AZURE },
+      },
+    });
+    const totalAwsVMs = await this.databaseService.request.count({
+      where: {
+        status: 'Approved',
+        resources: { cloudProvider: CloudProvider.AWS },
+      },
+    });
     // Example: running/pending status (if you have a status field)
     // const runningAzureVMs = await this.databaseService.azureVMInstance.count({ where: { status: 'Running' } });
     // const pendingAzureVMs = await this.databaseService.azureVMInstance.count({ where: { status: 'Pending' } });
@@ -63,7 +86,8 @@ export class InfrastructureService {
         declined: declinedRequests,
         pending: pendingRequests,
       },
-      resourceGroups: totalResourceGroups,
+      totalResourceGroupsAWS: totalResourceGroupsAWS,
+      totalResourceGroupsAzure: totalResourceGroupsAzure,
       vms: {
         azure: totalAzureVMs,
         aws: totalAwsVMs,
