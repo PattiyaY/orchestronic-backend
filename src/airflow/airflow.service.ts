@@ -14,8 +14,8 @@ export class AirflowService {
 
   async triggerDag(user: BackendJwtPayload, dagId: string) {
     if (
-      user.role == 'Admin' ||
-      user.role == 'IT' ||
+      user.role === 'Admin' ||
+      user.role === 'IT' ||
       user.role === 'Developer'
     ) {
       const path = `/api/v1/dags/${encodeURIComponent(dagId)}/dagRuns`;
