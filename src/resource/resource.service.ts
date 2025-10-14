@@ -59,12 +59,12 @@ export class ResourceService {
     const whereClause =
       user.role === Role.Admin || user.role === Role.IT
         ? {}
-        : { ownerId: user.id };
+        : { request: { ownerId: user.id } };
 
     return this.databaseService.resources.findMany({
+      where: whereClause,
       include: {
         request: {
-          where: whereClause,
           select: {
             id: true,
             displayCode: true,
