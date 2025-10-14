@@ -126,12 +126,12 @@ def supabase_delete_request(request_id):
         connection.commit()
         print(f"Deleted repository with id={repositoryId}")
 
-        # GET ResourcesConfigId, CloudProvider
+        # GET resourceConfigId, CloudProvider
         cursor.execute('SELECT "resourceConfigId" FROM "Resources" WHERE id = %s;', (resourcesId,))
         res = cursor.fetchone()
         if not res:
             raise ValueError(f"No resources found for id={resourcesId}")
-        resourcesConfigId = res
+        resourceConfigId = res
 
         # Delete resources record
         cursor.execute('DELETE FROM "Resources" WHERE id = %s;', (resourcesId,))
@@ -140,28 +140,42 @@ def supabase_delete_request(request_id):
 
         # Delete resources
         # Azure VM Instance
-        cursor.execute('SELECT * FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+        cursor.execute('SELECT * FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
         res = cursor.fetchall()
         if res:
-            cursor.execute('DELETE FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+            cursor.execute('DELETE FROM "AzureVMInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
             connection.commit()
-            print(f"Deleted AzureVMInstance with id={resourcesConfigId}")
+            print(f"Deleted AzureVMInstance with id={resourceConfigId}")
         
         # Azure Database Instance
-        cursor.execute('SELECT * FROM "AzureDatabaseInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+        cursor.execute('SELECT * FROM "AzureDatabaseInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
         res = cursor.fetchall()
         if res:
-            cursor.execute('DELETE FROM "AzureDatabaseInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+            cursor.execute('DELETE FROM "AzureDatabaseInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
             connection.commit()
-            print(f"Deleted AzureDatabaseInstance with id={resourcesConfigId}")
+            print(f"Deleted AzureDatabaseInstance with id={resourceConfigId}")
 
         # Azure Storage Instance
-        cursor.execute('SELECT * FROM "AzureStorageInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+        cursor.execute('SELECT * FROM "AzureStorageInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
         res = cursor.fetchall()
         if res:
-            cursor.execute('DELETE FROM "AzureStorageInstance" WHERE "resourceConfigId" = %s;', (resourcesConfigId,))
+            cursor.execute('DELETE FROM "AzureStorageInstance" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
             connection.commit()
-            print(f"Deleted AzureStorageInstance with id={resourcesConfigId}")
+            print(f"Deleted AzureStorageInstance with id={resourceConfigId}")
+
+        # Azure Resource Group Instance
+        cursor.execute('SELECT * FROM "Resources" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
+        res = cursor.fetchall()
+        if res:
+            cursor.execute('DELETE FROM "Resources" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
+            connection.commit()
+            print(f"Deleted Resources with id={resourceConfigId}")
+        
+        # Resource Config
+        cursor.execute('DELETE FROM "ResourceConfig" WHERE id = %s;', (resourceConfigId,))
+        connection.commit()
+        print(f"Deleted ResourceConfig with id={resourceConfigId}")
+
     finally:
         cursor.close()
         connection.close()
