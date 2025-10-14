@@ -164,6 +164,19 @@ def supabase_delete_request(request_id):
             connection.commit()
             print(f"Deleted AwsStorageInstance with id={resourceConfigId}")
 
+        # Azure Resource Group Instance
+        cursor.execute('SELECT * FROM "Resources" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
+        res = cursor.fetchall()
+        if res:
+            cursor.execute('DELETE FROM "Resources" WHERE "resourceConfigId" = %s;', (resourceConfigId,))
+            connection.commit()
+            print(f"Deleted Resources with id={resourceConfigId}")
+        
+        # Resource Config
+        cursor.execute('DELETE FROM "ResourceConfig" WHERE id = %s;', (resourceConfigId,))
+        connection.commit()
+        print(f"Deleted ResourceConfig with id={resourceConfigId}")
+
     finally:
         cursor.close()
         connection.close()
