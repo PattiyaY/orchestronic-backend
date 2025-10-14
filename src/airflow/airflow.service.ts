@@ -13,7 +13,11 @@ export class AirflowService {
   constructor(private readonly httpService: HttpService) {}
 
   async triggerDag(user: BackendJwtPayload, dagId: string) {
-    if (user.role == 'Admin' || user.role == 'IT') {
+    if (
+      user.role == 'Admin' ||
+      user.role == 'IT' ||
+      user.role === 'Developer'
+    ) {
       const path = `/api/v1/dags/${encodeURIComponent(dagId)}/dagRuns`;
       const payload = { conf: {} };
 
