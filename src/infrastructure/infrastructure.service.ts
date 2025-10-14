@@ -6,6 +6,7 @@ import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
 import { AirflowService } from '../airflow/airflow.service';
 import { CloudProvider } from '@prisma/client';
 import { BackendJwtPayload } from 'src/lib/types';
+import { GitlabService } from 'src/gitlab/gitlab.service';
 
 @Injectable()
 export class InfrastructureService {
@@ -13,6 +14,7 @@ export class InfrastructureService {
     private readonly databaseService: DatabaseService,
     private readonly rabbitmqService: RabbitmqService,
     private readonly airflowService: AirflowService,
+    private readonly gitlabService: GitlabService,
   ) {}
 
   create(createInfrastructureDto: CreateInfrastructureDto) {
@@ -93,8 +95,28 @@ export class InfrastructureService {
       where: { id: id },
       select: {
         resourcesId: true,
+        repository: true,
       },
     });
+
+    const gitlabRepoId: Array<{ id: number; name: string; path: string }> =
+      await this.gitlabService.findOne(request?.repository.name || '');
+
+    const gitlabRepo = gitlabRepoId.find(
+      (repo) =>
+        repo.id &&
+        repo.name === request?.repository.name &&
+        repo.path === request?.repository.name,
+    );
+
+    if (
+      gitlabRepo?.id &&
+      gitlabRepo?.name === request?.repository.name &&
+      gitlabRepo?.path === request?.repository.name
+    ) {
+      console.log(`Deleting GitLab repo with ID: ${gitlabRepo?.id}`);
+      await this.gitlabService.remove(gitlabRepo?.id);
+    }
 
     if (!request?.resourcesId) {
       throw new Error(`No resourcesId found for request ${id}`);

@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Status, Role, CloudProvider, RepositoryStatus } from '@prisma/client';
@@ -444,9 +445,7 @@ export class RequestService {
     });
 
     if (!request) {
-      throw new UnauthorizedException(
-        "Request not found or you don't have access to it",
-      );
+      throw new NotFoundException('Request not found or has been deleted');
     }
 
     return request;

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateAzureResourceDto } from './dto/create-azure-resource.dto';
 import { DatabaseService } from '../database/database.service';
 import { BackendJwtPayload } from '../lib/types';
+import { Role } from '@prisma/client';
 
 export interface AzureRetailPriceItem {
   currencyCode: string;
@@ -55,8 +56,13 @@ export class ResourceService {
   }
 
   findAll(user: BackendJwtPayload) {
+    const whereClause =
+      user.role === Role.Admin || user.role === Role.IT
+        ? {}
+        : { request: { ownerId: user.id } };
+
     return this.databaseService.resources.findMany({
-      where: { request: { ownerId: user.id } },
+      where: whereClause,
       include: {
         request: {
           select: {

@@ -14,8 +14,8 @@ export class ResourceController {
   @ApiOperation({
     summary: 'Find all resources for the authenticated user',
   })
-  findAll(@Request() req: RequestWithHeaders) {
-    const token = (req as RequestWithCookies).cookies?.['access_token'];
+  findAll(@Request() req: RequestWithCookies) {
+    const token = req.cookies?.['access_token'];
     if (token === undefined) {
       throw new UnauthorizedException('No access token');
     }

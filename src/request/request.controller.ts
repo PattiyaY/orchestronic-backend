@@ -46,10 +46,8 @@ export class RequestController {
     }
 
     try {
-      // decode as unknown first, then assert
       const decoded = jwt.verify(token, secret) as unknown;
       const payload = decoded as BackendJwtPayload;
-
       return this.requestService.findAll(payload);
     } catch (err) {
       console.error('Request Controller: Error decoding token', err);

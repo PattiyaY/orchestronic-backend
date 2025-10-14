@@ -33,15 +33,31 @@ export class GitlabService {
     return `This action returns all gitlab`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} gitlab`;
+  async findOne(name: string) {
+    const response = await fetch(`${this.gitlabUrl}/projects?search=${name}`, {
+      method: 'GET',
+      headers: {
+        'PRIVATE-TOKEN': this.token!,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`GitLab API error: ${error}`);
+    }
+
+    return response.json();
   }
 
   update(id: number, updateGitlabDto: UpdateGitlabDto) {
     return `This action updates a #${id} gitlab`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} gitlab`;
+  async remove(id: number) {
+    return await fetch(`${this.gitlabUrl}/projects/${id}`, {
+      method: 'DELETE',
+      headers: { 'PRIVATE-TOKEN': this.token! },
+    });
   }
 }

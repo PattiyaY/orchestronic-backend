@@ -34,9 +34,9 @@ export class GitlabController {
     return this.gitlabSyncService.syncRepositories();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.gitlabService.findOne(+id);
+  @Get(':name')
+  findOne(@Param('name') name: string) {
+    return this.gitlabService.findOne(name);
   }
 
   @Patch(':id')
