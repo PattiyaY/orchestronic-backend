@@ -6,6 +6,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { AirflowService } from '../airflow/airflow.service';
 import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
 import { HttpModule } from '@nestjs/axios';
+import { GitlabService } from 'src/gitlab/gitlab.service';
 
 @Module({
   imports: [
@@ -31,6 +32,11 @@ import { HttpModule } from '@nestjs/axios';
     ]),
   ],
   controllers: [InfrastructureController],
-  providers: [InfrastructureService, AirflowService, RabbitmqService],
+  providers: [
+    InfrastructureService,
+    AirflowService,
+    RabbitmqService,
+    GitlabService,
+  ],
 })
 export class InfrastructureModule {}

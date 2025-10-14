@@ -6,6 +6,7 @@ export enum RequestStatus {
   Pending = 'Pending',
   Approved = 'Approved',
   Rejected = 'Rejected',
+  Deleted = 'Deleted',
 }
 export class UpdateRequestStatusDto {
   @ApiProperty({ enum: RequestStatus })
